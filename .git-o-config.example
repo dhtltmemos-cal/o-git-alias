@@ -1,0 +1,96 @@
+# =============================================================================
+# .git-o-config — Token/Auth config cho git o-alias
+# Đặt cùng thư mục với alias.sh | KHÔNG commit file này lên git
+# =============================================================================
+#
+# CÁCH MATCH:
+#   Pattern dài hơn = ưu tiên cao hơn.
+#   [github.com/myorg/myrepo]  → ưu tiên hơn [github.com/myorg] → hơn [github.com]
+#
+# LOẠI AUTH:
+#   token=xxx   → nhúng vào URL: https://user:TOKEN@host/path
+#   header=xxx  → dùng -c http.extraHeader="xxx"
+#   user=xxx    → username đi kèm token (nếu bỏ trống, lấy owner từ URL)
+#
+# =============================================================================
+
+# ── GitHub ────────────────────────────────────────────────────────────────────
+# Tạo PAT tại: https://github.com/settings/tokens
+# Scope cần: repo (hoặc Fine-grained token giới hạn theo repo)
+
+[github.com/myorg]
+token=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Account thứ 2 cùng GitHub
+[github.com/my-other-account]
+token=ghp_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+
+# ── Azure DevOps ──────────────────────────────────────────────────────────────
+# Tạo PAT tại: https://dev.azure.com/{org}/_usersSettings/tokens
+# Encode base64 (username để trống, chỉ encode PAT với dấu : ở đầu):
+#   PowerShell : [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":YOUR_PAT"))
+#   Git Bash   : echo -n ":YOUR_PAT" | base64
+
+[dev.azure.com/myorg]
+header=Authorization: Basic BASE64ENCODEDPAT==
+
+# ── GitLab (cloud) ────────────────────────────────────────────────────────────
+# Tạo PAT tại: https://gitlab.com/-/user_settings/personal_access_tokens
+# Scope cần: read_repository, write_repository
+
+[gitlab.com/mygroup]
+token=glpat-xxxxxxxxxxxxxxxxxxxx
+
+# GitLab với org con (ưu tiên hơn [gitlab.com/mygroup] nếu URL khớp)
+[gitlab.com/mygroup/subgroup]
+token=glpat-zzzzzzzzzzzzzzzzzzzz
+
+# ── GitLab Self-hosted ────────────────────────────────────────────────────────
+# Dùng token nhúng URL nếu instance cho phép, hoặc header nếu cần
+
+[git.mycompany.com/myteam]
+token=glpat-selfhosted-token-here
+user=myusername
+
+# ── Gitea ─────────────────────────────────────────────────────────────────────
+# Tạo token tại: https://gitea.myserver.com/user/settings/applications
+
+[gitea.myserver.com/myuser]
+token=GITEA_ACCESS_TOKEN_HERE
+user=myuser
+
+# ── Forgejo ───────────────────────────────────────────────────────────────────
+# Forgejo dùng "token" prefix trong header
+
+[forgejo.myhost.com/myorg]
+header=Authorization: token FORGEJO_TOKEN_HERE
+
+# ── Bitbucket ─────────────────────────────────────────────────────────────────
+# Dùng App Password (KHÔNG phải account password)
+# Tạo tại: https://bitbucket.org/account/settings/app-passwords/
+# user = Bitbucket username (không phải email)
+
+[bitbucket.org/myworkspace]
+token=APP_PASSWORD_HERE
+user=mybitbucketusername
+
+# ── Gitea/Gogs self-hosted khác ───────────────────────────────────────────────
+[gogs.myserver.com]
+token=GOGS_TOKEN_HERE
+user=mygogusername
+
+# =============================================================================
+# GHI CHÚ THÊM
+# =============================================================================
+#
+# Nếu cùng host có nhiều org/user, tạo nhiều section khác nhau.
+# Section khớp dài nhất sẽ được dùng.
+#
+# Ví dụ: URL = https://github.com/myorg/myrepo.git
+#   [github.com]         → khớp, độ dài 10
+#   [github.com/myorg]   → khớp, độ dài 17  ← ĐƯỢC DÙNG (dài nhất)
+#
+# Với Azure DevOps, URL thường có dạng:
+#   https://user@dev.azure.com/org/project/_git/repo
+# Section [dev.azure.com/org] sẽ khớp đúng.
+#
