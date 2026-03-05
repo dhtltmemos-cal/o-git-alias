@@ -33,7 +33,7 @@ Write-Host ""
 Write-Host "[setup] Dang dang ky aliases..."
 Write-Host ""
 
-$Aliases = @("o","oaddcommit","oclone","opull","opush","opushforce","opullpush","ostash","ofetch","oinit","oconfig")
+$Aliases = @("o", "oaddcommit", "oclone", "opull", "opush", "opushforce", "opullpush", "ostash", "ofetch", "oinit", "oconfig", "oconfigclean")
 $Count = 0
 
 foreach ($cmd in $Aliases) {
@@ -45,7 +45,8 @@ foreach ($cmd in $Aliases) {
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK]   alias.$cmd"
         $Count++
-    } else {
+    }
+    else {
         Write-Host "[FAIL] alias.$cmd" -ForegroundColor Red
     }
 }

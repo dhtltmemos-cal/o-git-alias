@@ -123,6 +123,34 @@ function oconfig() {
 }
 
 # ---------------------------------------------------------------------------
+# OCONFIGCLEAN: Xóa tất cả alias.* trong .git/config (local repo)
+# Buộc git dùng alias global thay vì local override
+# ---------------------------------------------------------------------------
+function oconfigclean() {
+    local git_config=".git/config"
+    if [[ ! -f "$git_config" ]]; then
+        echo "[oconfigclean] ERROR: Không tìm thấy $git_config" >&2
+        echo "[oconfigclean]   Hãy chạy lệnh này trong thư mục chứa repo git." >&2
+        return 1
+    fi
+
+    # Đếm số alias tìm thấy trước khi xóa
+    local count
+    count=$(git config --local --list 2>/dev/null | grep -c "^alias\." || true)
+
+    if (( count == 0 )); then
+        echo "[oconfigclean] Không có alias nào trong $git_config."
+        return 0
+    fi
+
+    # Xóa toàn bộ section [alias] trong local .git/config
+    git config --local --remove-section alias 2>/dev/null || true
+
+    echo "[oconfigclean] ✓ Đã xóa $count alias khỏi $git_config"
+    echo "[oconfigclean]   Git sẽ dùng alias global (~/.gitconfig) từ bây giờ."
+}
+
+# ---------------------------------------------------------------------------
 # CORE: Parse .git-o-config, tìm auth khớp nhất (longest match) cho URL
 #
 # Output (biến toàn cục trong cùng shell process):
