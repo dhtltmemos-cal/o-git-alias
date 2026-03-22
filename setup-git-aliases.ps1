@@ -39,6 +39,7 @@ $Aliases = @(
     @("opull", "opull"),
     @("opush", "opush"),
     @("opushforce", "opushforce"),
+    @("opushforceurl", "opushforceurl"),
     @("opullpush", "opullpush"),
     @("ostash", "ostash"),
     @("ofetch", "ofetch"),
@@ -53,6 +54,7 @@ $Aliases = @(
     @("opl", "opull"),
     @("ops", "opush"),
     @("opf", "opushforce"),
+    @("opfurl", "opushforceurl"),
     @("opp", "opullpush"),
     @("ost", "ostash"),
     @("oft", "ofetch"),
@@ -95,6 +97,7 @@ Write-Host "  git oclone           git ocl"
 Write-Host "  git opull            git opl"
 Write-Host "  git opush            git ops"
 Write-Host "  git opushforce       git opf"
+Write-Host "  git opushforceurl    git opfurl"
 Write-Host "  git opullpush        git opp"
 Write-Host "  git ostash           git ost"
 Write-Host "  git ofetch           git oft"

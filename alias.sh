@@ -18,6 +18,8 @@
 #   git config --global alias.ops            "!source \"$SCRIPT\" && opush"
 #   git config --global alias.opushforce     "!source \"$SCRIPT\" && opushforce"
 #   git config --global alias.opf            "!source \"$SCRIPT\" && opushforce"
+#   git config --global alias.opushforceurl  "!source \"$SCRIPT\" && opushforceurl"
+#   git config --global alias.opfurl         "!source \"$SCRIPT\" && opushforceurl"
 #   git config --global alias.opullpush      "!source \"$SCRIPT\" && opullpush"
 #   git config --global alias.opp            "!source \"$SCRIPT\" && opullpush"
 #   git config --global alias.ostash         "!source \"$SCRIPT\" && ostash"
@@ -59,6 +61,7 @@ function o() {
     echo "  git opull             git opl    pull từ o.url"
     echo "  git opush             git ops    push lên o.url"
     echo "  git opushforce        git opf    force push lên o.url + o.url0..o.url9"
+    echo "  git opushforceurl     git opfurl force push lên một remote URL được chọn"
     echo "  git opullpush         git opp    pull → commit → push"
     echo "  git ostash            git ost    stash drop + clean working dir"
     echo "  git ofetch            git oft    fetch từ o.url"
@@ -483,6 +486,9 @@ _O_MODULES_DIR="${_O_SCRIPT_DIR}/modules"
 
 [[ -f "${_O_MODULES_DIR}/oaddfile.sh" ]] \
     && source "${_O_MODULES_DIR}/oaddfile.sh"
+
+[[ -f "${_O_MODULES_DIR}/opushforceurl.sh" ]] \
+    && source "${_O_MODULES_DIR}/opushforceurl.sh"
 
 # =============================================================================
 # (Thêm module mới phía dưới theo cùng pattern)

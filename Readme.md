@@ -15,6 +15,10 @@ git-config.template       # Template .git/config dùng cho lệnh oinit
 .git-o-config             # File auth cá nhân — KHÔNG commit (đã có trong .gitignore)
 .git-o-config.example     # Ví dụ mẫu cho .git-o-config
 .gitignore                # Loại trừ .git-o-config
+modules/
+  ocreateremote.sh        # Module tạo remote repo qua REST API
+  oaddfile.sh             # Module tạo file helper (.gitignore, .opushforce.message)
+  opushforceurl.sh        # Module force push lên một remote URL được chọn
 ```
 
 ---
@@ -41,7 +45,7 @@ powershell -ExecutionPolicy Bypass -File .\setup-git-aliases.ps1
 
 Hoặc right-click lên `setup-git-aliases.ps1` → **Run with PowerShell**.
 
-Script sẽ tự động đăng ký 11 alias vào git global config. Kiểm tra:
+Script sẽ tự động đăng ký alias vào git global config. Kiểm tra:
 
 ```bash
 git config --global --list | grep alias.o
@@ -52,19 +56,41 @@ git o
 
 ## Lệnh
 
-| Lệnh                   | Mô tả                                                              |
-| ---------------------- | ------------------------------------------------------------------ |
-| `git o`                | Hiện danh sách lệnh                                                |
-| `git oaddcommit [msg]` | `git add -A` + commit (tự sinh message nếu bỏ trống)               |
-| `git oclone [dir]`     | Clone repo từ `o.url`                                              |
-| `git opull`            | Pull từ `o.url`                                                    |
-| `git opush`            | Push lên `o.url` (branch `main`)                                   |
-| `git opushforce [msg]` | add → commit → force push lên `o.url` và tất cả `o.url0`..`o.url9` |
-| `git opullpush [msg]`  | pull → add → commit → push                                         |
-| `git ostash`           | Stash + drop + clean working dir                                   |
-| `git ofetch`           | Fetch từ `o.url`                                                   |
-| `git oinit [url]`      | `git init` + ghi `.git/config` từ template                         |
-| `git oconfig`          | Mở `.git/config` bằng VSCode                                       |
+| Lệnh                      | Mô tả                                                              |
+| ------------------------- | ------------------------------------------------------------------ |
+| `git o`                   | Hiện danh sách lệnh                                                |
+| `git oaddcommit [msg]`    | `git add -A` + commit (tự sinh message nếu bỏ trống)               |
+| `git oclone [dir]`        | Clone repo từ `o.url`                                              |
+| `git opull`               | Pull từ `o.url`                                                    |
+| `git opush`               | Push lên `o.url` (branch `main`)                                   |
+| `git opushforce [msg]`    | add → commit → force push lên `o.url` và tất cả `o.url0`..`o.url9` |
+| `git opushforceurl [msg]` | Chọn một remote URL → force push lên đúng URL đó                   |
+| `git opullpush [msg]`     | pull → add → commit → push                                         |
+| `git ostash`              | Stash + drop + clean working dir                                   |
+| `git ofetch`              | Fetch từ `o.url`                                                   |
+| `git oinit [url]`         | `git init` + ghi `.git/config` từ template                         |
+| `git oconfig`             | Mở `.git/config` bằng VSCode                                       |
+| `git ocreateremote`       | Tạo remote repo mới qua REST API của provider                      |
+| `git addfile <sub>`       | Tạo file helper cho repo                                           |
+
+### Viết tắt
+
+| Viết tắt     | Tương đương         |
+| ------------ | ------------------- |
+| `git oac`    | `git oaddcommit`    |
+| `git ocl`    | `git oclone`        |
+| `git opl`    | `git opull`         |
+| `git ops`    | `git opush`         |
+| `git opf`    | `git opushforce`    |
+| `git opfurl` | `git opushforceurl` |
+| `git opp`    | `git opullpush`     |
+| `git ost`    | `git ostash`        |
+| `git oft`    | `git ofetch`        |
+| `git oi`     | `git oinit`         |
+| `git oc`     | `git oconfig`       |
+| `git occ`    | `git oconfigclean`  |
+| `git ocr`    | `git ocreateremote` |
+| `git af`     | `git addfile`       |
 
 ---
 
@@ -76,10 +102,62 @@ Thay vì dùng `git remote`, bộ alias này đọc `o.url` từ `.git/config` c
 # Remote chính
 git config o.url https://github.com/org/repo.git
 
-# Mirror (tùy chọn) — dùng với opushforce
+# Mirror (tùy chọn) — dùng với opushforce / opushforceurl
 git config o.url0 https://gitlab.com/org/repo.git
 git config o.url1 https://gitea.myserver.com/org/repo.git
 ```
+
+---
+
+## Push lên một remote cụ thể (`opushforceurl`)
+
+Dùng khi bạn có nhiều remote nhưng chỉ muốn push lên **một URL được chọn**, không phải tất cả.
+
+```bash
+git opushforceurl
+# hoặc viết tắt
+git opfurl
+```
+
+**Flow tương tác:**
+
+1. Hiển thị danh sách tất cả `o.url`, `o.url0`..`o.url9` đang có
+2. Hỏi chọn URL muốn push
+3. Kiểm tra working tree:
+   - **Sạch** (không có file thay đổi) → chỉ force push, bỏ qua add/commit
+   - **Có thay đổi** → `git add -A` + commit (auto message hoặc từ `.opushforce.message`) + force push
+
+```
+  ┌─────────────────────────────────────────────────
+  │  git opushforceurl
+  ├─────────────────────────────────────────────────
+  │  Working tree : ⚠  có 3 file thay đổi → sẽ add + commit + push
+  └─────────────────────────────────────────────────
+
+  Chọn remote URL để force push:
+
+    [1] o.url        https://github.com/org/repo.git
+    [2] o.url0       https://gitlab.com/org/repo.git
+    [3] o.url1       https://gitea.myserver.com/org/repo.git
+
+  Số thứ tự [1-3]: 2
+```
+
+---
+
+## Push lên nhiều remote cùng lúc (`opushforce`)
+
+Dùng khi muốn đẩy lên **tất cả** remote một lúc:
+
+```bash
+git config o.url  https://github.com/org/repo.git
+git config o.url0 https://gitlab.com/org/repo.git
+git config o.url1 https://gitea.myserver.com/org/repo.git
+
+git opushforce "deploy: release v1.0"
+```
+
+Force push sẽ lần lượt đẩy lên tất cả URL theo thứ tự `o.url` → `o.url0` → … → `o.url9`.
 
 ---
 
@@ -195,22 +273,6 @@ Nếu bỏ trống URL, dùng placeholder — cập nhật sau:
 git oinit
 git config o.url https://github.com/myorg/myrepo.git
 ```
-
----
-
-## Push lên nhiều remote cùng lúc
-
-Dùng `opushforce` với nhiều `o.url*`:
-
-```bash
-git config o.url  https://github.com/org/repo.git
-git config o.url0 https://gitlab.com/org/repo.git
-git config o.url1 https://gitea.myserver.com/org/repo.git
-
-git opushforce "deploy: release v1.0"
-```
-
-Force push sẽ lần lượt đẩy lên tất cả URL theo thứ tự `o.url` → `o.url0` → … → `o.url9`.
 
 ---
 
