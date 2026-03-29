@@ -367,4 +367,4 @@ git config o.url https://github.com/myorg/myrepo.git
 - File `.git-o-config` đã được thêm vào `.gitignore` — không bao giờ bị commit nhầm.
 - `alias.sh` dùng `BASH_SOURCE[0]` để tự tìm đường dẫn, không cần chỉnh tay sau khi đăng ký.
 - `opullbranch` dùng remote tạm `_o_tmp_N` trong quá trình fetch, tự dọn sạch sau khi xong — không ảnh hưởng cấu hình git của repo.
-- `opullbranch` yêu cầu working tree sạch trước khi áp nội dung branch khác để tránh ghi đè nhầm thay đổi đang làm dở.
+- `opullbranch` yêu cầu working tree sạch trước khi áp nội dung branch khác để tránh ghi đè nhầm thay đổi đang làm dở. Riêng `.opushforce.message` sẽ được bỏ qua.

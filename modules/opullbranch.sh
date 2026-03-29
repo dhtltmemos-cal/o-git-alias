@@ -38,16 +38,39 @@ function _opb_cleanup_tmp_remotes() {
 }
 
 # ---------------------------------------------------------------------------
+# HELPER: Dòng status nào chỉ liên quan .opushforce.message thì có thể bỏ qua
+# vì đây chỉ là file ghi chú message khi push
+# ---------------------------------------------------------------------------
+function _opb_is_ignorable_status_line() {
+    local line="$1"
+    local path="${line:3}"
+
+    [[ "$path" == *" -> "* ]] && return 1
+
+    case "$path" in
+        ".opushforce.message"|*/.opushforce.message) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# ---------------------------------------------------------------------------
 # HELPER: Chỉ cho phép tiếp tục khi working tree sạch để tránh ghi đè nhầm
+# Ngoại lệ: chỉ có .opushforce.message thì vẫn cho chạy tiếp
 # ---------------------------------------------------------------------------
 function _opb_require_clean_worktree() {
     local repo_root="${1:-.}"
+    local line
 
-    if [[ -n "$(git -C "$repo_root" status --porcelain 2>/dev/null)" ]]; then
-        echo "[opullbranch] ERROR: Working tree đang có thay đổi." >&2
-        echo "[opullbranch]   Hãy commit / stash / discard trước khi lấy nội dung từ branch khác." >&2
-        return 1
-    fi
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+
+        if ! _opb_is_ignorable_status_line "$line"; then
+            echo "[opullbranch] ERROR: Working tree đang có thay đổi." >&2
+            echo "[opullbranch]   Hãy commit / stash / discard trước khi lấy nội dung từ branch khác." >&2
+            echo "[opullbranch]   File .opushforce.message sẽ được bỏ qua." >&2
+            return 1
+        fi
+    done < <(git -C "$repo_root" status --porcelain 2>/dev/null)
 
     return 0
 }
