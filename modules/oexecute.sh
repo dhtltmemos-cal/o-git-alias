@@ -38,9 +38,10 @@ function _oe_print_menu() {
     echo "  │  11   git oconfig             git oc     mở .git/config bằng VSCode"
     echo "  │  12   git oconfigclean        git occ    xóa alias local .git/config"
     echo "  │  13   git ocreateremote       git ocr    tạo remote repo qua API"
-    echo "  │  14   git addfile omessage    git af     tạo .opushforce.message"
-    echo "  │  15   git addfile ogitignore  git af     tạo / cập nhật .gitignore"
-    echo "  │  16   git oclone              git ocl    clone repo từ o.url"
+    echo "  │  14   git addfile packagejson git af     tạo / cập nhật package.json"
+    echo "  │  15   git addfile omessage    git af     tạo .opushforce.message"
+    echo "  │  16   git addfile ogitignore  git af     tạo / cập nhật .gitignore"
+    echo "  │  17   git oclone              git ocl    clone repo từ o.url"
     echo "  │"
     echo "  │   0   Thoát"
     echo "  │"
@@ -144,16 +145,21 @@ function _oe_run() {
             ocreateremote
             ;;
         14)
+            echo "  → git addfile packagejson"
+            echo ""
+            addfile packagejson
+            ;;
+        15)
             echo "  → git addfile omessage"
             echo ""
             addfile omessage
             ;;
-        15)
+        16)
             echo "  → git addfile ogitignore"
             echo ""
             addfile ogitignore
             ;;
-        16)
+        17)
             echo "  → git oclone"
             local dest
             read -r -p "  Thư mục đích (Enter để dùng tên repo): " dest
@@ -183,12 +189,12 @@ function oexecute() {
     while true; do
         _oe_print_menu
 
-        read -r -p "  Chọn số thứ tự [0-16]: " choice
+        read -r -p "  Chọn số thứ tự [0-17]: " choice
 
         # Validate input
-        if ! [[ "$choice" =~ ^[0-9]+$ ]] || (( choice < 0 || choice > 16 )); then
+        if ! [[ "$choice" =~ ^[0-9]+$ ]] || (( choice < 0 || choice > 17 )); then
             echo ""
-            echo "  ⚠ Nhập số từ 0 đến 16."
+            echo "  ⚠ Nhập số từ 0 đến 17."
             sleep 1
             continue
         fi

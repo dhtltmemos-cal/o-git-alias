@@ -15,6 +15,7 @@ git-config.template       # Template .git/config dùng cho lệnh oinit
 .git-o-config             # File auth cá nhân — KHÔNG commit (đã có trong .gitignore)
 .git-o-config.example     # Ví dụ mẫu cho .git-o-config
 .gitignore                # Loại trừ .git-o-config
+package.json              # npm scripts cho Windows cmd (được git addfile tạo / cập nhật)
 modules/
   ocreateremote.sh        # Module tạo remote repo qua REST API
   oaddfile.sh             # Module tạo file helper (.gitignore, .opushforce.message)
@@ -77,6 +78,33 @@ git oe
 | `git ocreateremote`       | Tạo remote repo mới qua REST API của provider                      |
 | `git addfile <sub>`       | Tạo file helper cho repo                                           |
 
+### `addfile`
+
+```bash
+git addfile packagejson
+git addfile omessage
+git addfile ogitignore
+```
+
+Khi chạy `git addfile packagejson`, script sẽ tạo hoặc cập nhật `package.json` trong thư mục hiện tại để thêm npm scripts cho Windows.
+
+Khi chạy `git addfile omessage` hoặc `git addfile ogitignore`, script cũng sẽ đồng bộ `package.json` trước, rồi mới tạo file helper tương ứng.
+
+`addfile` hiện có 3 sub-command:
+
+| Sub-command   | Mô tả |
+| ------------ | ----- |
+| `packagejson` | Tạo / cập nhật `package.json` và thêm npm scripts Windows |
+| `omessage`    | Tạo `.opushforce.message` |
+| `ogitignore`  | Tạo / cập nhật `.gitignore` |
+
+Khi đồng bộ `package.json`, script sẽ:
+
+1. Tạo `package.json` nếu chưa có
+2. Bổ sung các npm scripts còn thiếu theo tên lệnh **đầy đủ**
+3. Không ghi đè scripts đang có sẵn của bạn
+4. Giữ phần `scripts` custom của bạn nếu đang có
+
 ### Viết tắt
 
 | Viết tắt     | Tương đương         |
@@ -97,6 +125,64 @@ git oe
 | `git occ`    | `git oconfigclean`  |
 | `git ocr`    | `git ocreateremote` |
 | `git af`     | `git addfile`       |
+
+---
+
+## Chạy qua npm scripts trên Windows
+
+Sau khi đã chạy một trong hai lệnh bên dưới trong thư mục dự án:
+
+```bash
+git addfile packagejson
+# hoặc
+git addfile omessage
+# hoặc
+git addfile ogitignore
+```
+
+`package.json` sẽ có các npm scripts để mở **cmd.exe mới của Windows** và chạy alias tương ứng ngay trong thư mục hiện tại.
+
+Ví dụ:
+
+```bash
+npm run git-addfile-packagejson
+npm run git-opushforce
+npm run git-opushforceurl
+npm run git-oaddcommit
+npm run git-addfile-omessage
+```
+
+Lưu ý:
+
+- npm scripts **chỉ tạo theo tên đầy đủ**, không tạo key viết tắt như `git-opf`, `git-oac`, `git-af`
+- npm scripts này dành cho **Windows**
+- Mỗi lần chạy sẽ mở một cửa sổ `cmd.exe` mới
+- Nếu `package.json` đã có `scripts` riêng của bạn, `addfile` chỉ thêm script còn thiếu và giữ nguyên script custom
+
+Danh sách npm script được tạo mặc định:
+
+```text
+git-o
+git-oexecute
+git-oaddcommit
+git-oclone
+git-opull
+git-opullbranch
+git-opush
+git-opushforce
+git-opushforceurl
+git-opullpush
+git-ostash
+git-ofetch
+git-oinit
+git-oconfig
+git-oconfigclean
+git-ocreateremote
+git-addfile
+git-addfile-packagejson
+git-addfile-omessage
+git-addfile-ogitignore
+```
 
 ---
 
@@ -132,15 +218,16 @@ git oexecute
   │  11   git oconfig             git oc     mở .git/config bằng VSCode
   │  12   git oconfigclean        git occ    xóa alias local .git/config
   │  13   git ocreateremote       git ocr    tạo remote repo qua API
-  │  14   git addfile omessage    git af     tạo .opushforce.message
-  │  15   git addfile ogitignore  git af     tạo / cập nhật .gitignore
-  │  16   git oclone              git ocl    clone repo từ o.url
+  │  14   git addfile packagejson git af     tạo / cập nhật package.json
+  │  15   git addfile omessage    git af     tạo .opushforce.message
+  │  16   git addfile ogitignore  git af     tạo / cập nhật .gitignore
+  │  17   git oclone              git ocl    clone repo từ o.url
   │
   │   0   Thoát
   │
   └──────────────────────────────────────────────────────────────────
 
-  Chọn số thứ tự [0-16]: _
+  Chọn số thứ tự [0-17]: _
 ```
 
 - Các lệnh cần commit message (oaddcommit, opushforce, v.v.) sẽ được hỏi thêm message ngay sau khi chọn.
