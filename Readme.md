@@ -439,9 +439,10 @@ Lệnh sẽ:
 
 1. Chạy `git init --initial-branch=main`
 2. Ghi `.git/config` từ `git-config.template`, thay `{{REMOTE_URL}}` bằng URL bạn truyền vào
-3. Tạo `.opushforce.message` trong thư mục hiện tại
-4. Tạo / cập nhật `.gitignore` theo template **Node.js + .NET / C#**
-5. Tự thêm ignore cho `.git-o-config` và `.opushforce.message`
+3. Tạo `remote "origin"` trỏ tới URL đó và set `branch.main.remote = origin`
+4. Tạo `.opushforce.message` trong thư mục hiện tại
+5. Tạo / cập nhật `.gitignore` theo template **Node.js + .NET / C#**
+6. Tự thêm ignore cho `.git-o-config` và `.opushforce.message`
 
 Nếu bỏ trống URL, dùng placeholder — cập nhật sau:
 
@@ -455,6 +456,7 @@ git config o.url https://github.com/myorg/myrepo.git
 ## Ghi chú
 
 - Tất cả lệnh push/pull/fetch/clone đều **không lưu token vào git credential store** — token chỉ tồn tại trong bộ nhớ lúc chạy lệnh.
+- Các lệnh push của bộ alias không dùng `-u` khi đẩy thẳng tới URL, nên Git sẽ không tự ghi `branch.<name>.remote = <URL/token>` vào `.git/config`.
 - File `.git-o-config` và `.opushforce.message` sẽ được thêm vào `.gitignore` — không bị commit nhầm.
 - `alias.sh` dùng `BASH_SOURCE[0]` để tự tìm đường dẫn, không cần chỉnh tay sau khi đăng ký.
 - `opullbranch` dùng remote tạm `_o_tmp_N` trong quá trình fetch, tự dọn sạch sau khi xong — không ảnh hưởng cấu hình git của repo.

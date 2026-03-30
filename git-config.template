@@ -13,6 +13,10 @@
 [o]
 	url = {{REMOTE_URL}}
 
+[remote "origin"]
+	url = {{REMOTE_URL}}
+	fetch = +refs/heads/*:refs/remotes/origin/*
+
 [branch "main"]
-	remote = {{REMOTE_URL}}
+	remote = origin
 	merge = refs/heads/main

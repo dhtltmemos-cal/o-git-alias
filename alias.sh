@@ -343,7 +343,7 @@ function opull() {
 
 function opush() {
     local url; url=$(_o_get_url) || return 1
-    _o_run_git "$url" push --quiet -u main
+    _o_run_git "$url" push --quiet main
     echo "[opush] Done: $url"
 }
 
@@ -426,15 +426,15 @@ function _o_force_push_to() {
             local auth_url
             auth_url=$(_o_embed_token "$url" "$O_AUTH_TOKEN" "$O_AUTH_USER")
             echo "[o-auth] token @ [$O_AUTH_MATCH]" >&2
-            git push --quiet --force -u "$auth_url" main
+            git push --quiet --force "$auth_url" main
             ;;
         header)
             echo "[o-auth] header @ [$O_AUTH_MATCH]" >&2
-            git -c "http.extraHeader=${O_AUTH_HEADER}" push --quiet --force -u "$url" main
+            git -c "http.extraHeader=${O_AUTH_HEADER}" push --quiet --force "$url" main
             ;;
         none|*)
             echo "[o-auth] WARN: Không có auth cho $url" >&2
-            git push --quiet --force -u "$url" main
+            git push --quiet --force "$url" main
             ;;
     esac
     echo "[opushforce] ✓ Done: $url"
@@ -460,13 +460,13 @@ function opullpush() {
         token)
             local auth_url
             auth_url=$(_o_embed_token "$url" "$O_AUTH_TOKEN" "$O_AUTH_USER")
-            git push --quiet -u "$auth_url" main
+            git push --quiet "$auth_url" main
             ;;
         header)
-            git -c "http.extraHeader=${O_AUTH_HEADER}" push --quiet -u "$url" main
+            git -c "http.extraHeader=${O_AUTH_HEADER}" push --quiet "$url" main
             ;;
         none|*)
-            git push --quiet -u "$url" main
+            git push --quiet "$url" main
             ;;
     esac
     echo "[opullpush] ✓ Done"
