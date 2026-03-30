@@ -1,5 +1,6 @@
 .git-o-config
 .opushforce.message
+git-config
 
 # ── Node.js ──────────────────────────────────────────
 node_modules/
