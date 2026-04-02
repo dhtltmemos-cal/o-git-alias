@@ -1,0 +1,31 @@
+{
+  "_comment": "Template để set Azure Pipeline Variables bằng ocli azure",
+  "_comment2": "Key bắt đầu bằng '_' sẽ bị bỏ qua khi import",
+  "_comment3": "Hai format hỗ trợ:",
+  "_comment4": "  string  → isSecret=false, allowOverride=true (mặc định)",
+  "_comment5": "  object  → tuỳ chỉnh isSecret và allowOverride",
+
+  "BUILD_ENV": "production",
+
+  "API_BASE_URL": "https://api.example.com",
+
+  "DEPLOY_TIMEOUT": "300",
+
+  "DB_PASSWORD": {
+    "value": "your-secret-password",
+    "isSecret": true,
+    "allowOverride": false
+  },
+
+  "API_KEY": {
+    "value": "your-api-key",
+    "isSecret": true,
+    "allowOverride": true
+  },
+
+  "MAX_RETRIES": {
+    "value": "3",
+    "isSecret": false,
+    "allowOverride": true
+  }
+}
