@@ -30,7 +30,22 @@ token=ghp_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
 # Encode base64 (username để trống, chỉ encode PAT với dấu : ở đầu):
 #   PowerShell : [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":YOUR_PAT"))
 #   Git Bash   : echo -n ":YOUR_PAT" | base64
+#
+# CÁCH KHAI BÁO AZURE PROJECT TRONG SECTION:
+#
+#   Cách 1 — Kèm project trong section (KHUYẾN NGHỊ):
+#     Format: [dev.azure.com/{org}/{project}]
+#     → Wizard tự dùng project này, KHÔNG hỏi lại.
+#
+#   Cách 2 — Chỉ có org, không có project:
+#     Format: [dev.azure.com/{org}]
+#     → Wizard gọi API list project có sẵn để chọn, hoặc nhập tên mới.
 
+# Cách 1: có kèm project → không hỏi lại
+[dev.azure.com/myorg/myproject]
+header=Authorization: Basic BASE64ENCODEDPAT==
+
+# Cách 2: chỉ org → wizard sẽ list project từ API để chọn
 [dev.azure.com/myorg]
 header=Authorization: Basic BASE64ENCODEDPAT==
 
@@ -92,5 +107,7 @@ user=mygogusername
 #
 # Với Azure DevOps, URL thường có dạng:
 #   https://user@dev.azure.com/org/project/_git/repo
-# Section [dev.azure.com/org] sẽ khớp đúng.
+#
+# Section [dev.azure.com/org/project] sẽ khớp đúng và tự điền project,
+# Section [dev.azure.com/org] cũng khớp nhưng wizard sẽ hỏi project qua API.
 #

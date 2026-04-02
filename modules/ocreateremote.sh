@@ -65,15 +65,26 @@ function _o_provider_label() {
 }
 
 # ---------------------------------------------------------------------------
-# HELPER: Parse "host/owner" từ section name → set _O_HOST, _O_OWNER
+# HELPER: Parse "host/owner[/project]" từ section name
+# → set _O_HOST, _O_OWNER, _O_AZURE_PROJECT_FROM_CONFIG
+#
+# Ví dụ:
+#   [dev.azure.com/myorg]          → _O_HOST=dev.azure.com  _O_OWNER=myorg  _O_AZURE_PROJECT_FROM_CONFIG=""
+#   [dev.azure.com/myorg/myproj]   → _O_HOST=dev.azure.com  _O_OWNER=myorg  _O_AZURE_PROJECT_FROM_CONFIG=myproj
 # ---------------------------------------------------------------------------
 function _o_parse_section() {
     local section="$1"
-    if [[ "$section" =~ ^([^/]+)/(.+)$ ]]; then
+    _O_AZURE_PROJECT_FROM_CONFIG=""
+
+    if [[ "$section" =~ ^([^/]+)/([^/]+)/(.+)$ ]]; then
+        # Ba phần: host / owner / project
         _O_HOST="${BASH_REMATCH[1]}"
-        # Lấy phần đầu tiên làm owner (Azure có thể là org/project)
-        local rest="${BASH_REMATCH[2]}"
-        _O_OWNER="${rest%%/*}"
+        _O_OWNER="${BASH_REMATCH[2]}"
+        _O_AZURE_PROJECT_FROM_CONFIG="${BASH_REMATCH[3]}"
+    elif [[ "$section" =~ ^([^/]+)/(.+)$ ]]; then
+        # Hai phần: host / owner
+        _O_HOST="${BASH_REMATCH[1]}"
+        _O_OWNER="${BASH_REMATCH[2]}"
     else
         _O_HOST="$section"
         _O_OWNER=""
@@ -299,6 +310,111 @@ function _o_create_bitbucket() {
 }
 
 # ---------------------------------------------------------------------------
+# PROVIDER: Azure DevOps — List projects qua API
+# Output: in danh sách tên project, mỗi dòng 1 cái. "" nếu lỗi.
+# ---------------------------------------------------------------------------
+function _o_azure_list_projects() {
+    local owner="$1"
+
+    # Build auth header cho Azure (Basic base64(":token"))
+    local auth_header=""
+    case "$O_AUTH_TYPE" in
+        token)
+            auth_header="Authorization: Basic $(printf '%s' ":${O_AUTH_TOKEN}" | base64 -w0)"
+            ;;
+        header)
+            auth_header="$O_AUTH_HEADER"
+            ;;
+        none|*)
+            return 1
+            ;;
+    esac
+
+    local resp
+    resp=$(curl -s -X GET \
+        -H "Content-Type: application/json" \
+        -H "$auth_header" \
+        "https://dev.azure.com/${owner}/_apis/projects?api-version=7.1" 2>/dev/null)
+
+    # Trích tên project từ JSON: "name":"<value>"
+    # Azure trả về mảng value[].name
+    echo "$resp" | grep -o '"name":"[^"]*"' | cut -d'"' -f4
+}
+
+# ---------------------------------------------------------------------------
+# PROVIDER: Azure DevOps — Chọn project (từ config, từ API, hoặc nhập tay)
+#
+# Input:  $1 = owner (org name)
+#         $2 = project đã có trong config (có thể rỗng)
+# Output: in tên project ra stdout. Return 1 nếu không xác định được.
+# ---------------------------------------------------------------------------
+function _o_azure_resolve_project() {
+    local owner="$1"
+    local config_project="$2"
+
+    # ── Ưu tiên 1: project đã có trong section config ─────────────────────
+    if [[ -n "$config_project" ]]; then
+        echo "$config_project"
+        return 0
+    fi
+
+    # ── Ưu tiên 2: list project qua API, cho chọn hoặc nhập mới ──────────
+    echo "" >&2
+    echo "  [Azure] Đang lấy danh sách project từ dev.azure.com/${owner}..." >&2
+
+    local -a projects=()
+    while IFS= read -r pname; do
+        [[ -n "$pname" ]] && projects+=("$pname")
+    done < <(_o_azure_list_projects "$owner")
+
+    if [[ ${#projects[@]} -gt 0 ]]; then
+        echo "" >&2
+        echo "  Project có sẵn trên Azure DevOps (org: ${owner}):" >&2
+        echo "" >&2
+        local i
+        for i in "${!projects[@]}"; do
+            printf "    [%d] %s\n" "$((i+1))" "${projects[$i]}" >&2
+        done
+        printf "    [%d] Nhập tên project mới\n" "$((${#projects[@]}+1))" >&2
+        echo "" >&2
+
+        local choice
+        local max_choice=$(( ${#projects[@]} + 1 ))
+        while true; do
+            read -r -p "  Chọn project [1-${max_choice}]: " choice >&2 || true
+            [[ "$choice" =~ ^[0-9]+$ ]] \
+                && (( choice >= 1 && choice <= max_choice )) \
+                && break
+            echo "  Nhập số từ 1 đến ${max_choice}." >&2
+        done
+
+        if (( choice <= ${#projects[@]} )); then
+            # Chọn project có sẵn
+            local selected="${projects[$((choice-1))]}"
+            echo "  → Azure Project: $selected" >&2
+            echo "$selected"
+            return 0
+        fi
+        # Rơi xuống: chọn "Nhập mới"
+    else
+        echo "  [Azure] Không lấy được danh sách project (auth lỗi hoặc không có project)." >&2
+        echo "  [Azure] Bạn có thể nhập tên project thủ công." >&2
+    fi
+
+    # ── Fallback: nhập tay ────────────────────────────────────────────────
+    echo "" >&2
+    local new_project=""
+    while true; do
+        read -r -p "  Azure Project name (nhập tên mới hoặc có sẵn): " new_project >&2 || true
+        [[ -n "$new_project" ]] && break
+        echo "  Azure DevOps cần project name." >&2
+    done
+    echo "  → Azure Project: $new_project" >&2
+    echo "$new_project"
+    return 0
+}
+
+# ---------------------------------------------------------------------------
 # PROVIDER: Azure DevOps
 # ---------------------------------------------------------------------------
 function _o_create_azure() {
@@ -328,7 +444,8 @@ function _o_create_azure() {
 #   2. Tên repo              (default: tên thư mục hiện tại)
 #   3. Visibility            (default: private)
 #   4. Mô tả                 (optional)
-#   5. Confirm → tạo → tự lưu URL vào o.url / o.url0..9
+#   5. [Azure] Chọn project  (từ config / API / nhập tay)
+#   6. Confirm → tạo → tự lưu URL vào o.url / o.url0..9
 # =============================================================================
 function ocreateremote() {
     local dry_run="0"
@@ -390,8 +507,9 @@ function ocreateremote() {
 
     local selected="${sections[$((choice-1))]}"
     _o_parse_section "$selected"
+    # _O_HOST, _O_OWNER, _O_AZURE_PROJECT_FROM_CONFIG đã được set
 
-    # Resolve auth ngay để đọc header (dùng cho heuristic self-hosted)
+    # Resolve auth ngay để dùng cho API list projects (Azure)
     _o_resolve_auth "https://${_O_HOST}/${_O_OWNER}"
 
     local provider
@@ -452,17 +570,23 @@ function ocreateremote() {
     [[ -n "$description" ]] && echo "  → Mô tả    : $description"
 
     # ─────────────────────────────────────────────────────────────────────────
-    # BƯỚC 4b — Azure: hỏi thêm project name
+    # BƯỚC 4b — Azure: resolve project (config → API list → nhập tay)
     # ─────────────────────────────────────────────────────────────────────────
     local azure_project=""
     if [[ "$provider" == "azure" ]]; then
-        echo ""
-        while true; do
-            read -r -p "  Azure Project name: " azure_project
-            [[ -n "$azure_project" ]] && break
-            echo "  Azure DevOps cần project name."
-        done
-        echo "  → AZ Project: $azure_project"
+        if [[ -n "$_O_AZURE_PROJECT_FROM_CONFIG" ]]; then
+            # Project đã có trong section config → dùng luôn
+            azure_project="$_O_AZURE_PROJECT_FROM_CONFIG"
+            echo ""
+            echo "  → AZ Project: $azure_project  (từ cấu hình)"
+        else
+            # Chưa có → list API hoặc nhập tay
+            azure_project=$(_o_azure_resolve_project "$_O_OWNER" "")
+            if [[ -z "$azure_project" ]]; then
+                echo "  ERROR: Cần Azure project name để tiếp tục." >&2
+                return 1
+            fi
+        fi
     fi
 
     # ─────────────────────────────────────────────────────────────────────────
