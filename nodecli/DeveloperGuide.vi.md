@@ -149,6 +149,9 @@ Nếu nghiệp vụ hỗ trợ nhập từ file, thêm template vào `templates/
 
 Ví dụ thêm nghiệp vụ "Variables" vào `ocli gh`:
 
+> Lưu ý: khi thêm subcommand mới (ví dụ `ocli clip`), cần cập nhật đồng thời `bin/ocli.js`, `README.md`, `ProjectStructure.md`, `USER_CHANGELOG.md`.
+
+
 **Bước 1** — Tạo `services/gh/variables.js` theo cấu trúc chuẩn ở mục 2.3.
 
 **Bước 2** — Trong `services/gh/index.js`, thêm require và mục menu:

@@ -23,6 +23,8 @@ nodecli/
     azure/
       index.js                      ← Subcommand ocli azure
       variables.js                  ← Quản lý Azure Pipeline variables
+    clip/
+      index.js                      ← Subcommand ocli clip (clipboard → file)
   templates/
     gh-secrets.json                 ← Template JSON GitHub secrets
     gh-secrets.env.example          ← Template .env GitHub secrets
@@ -48,6 +50,7 @@ flowchart TB
 
     O -->|subcommand gh| GH[services/gh/index.js]
     O -->|subcommand azure| AZ[services/azure/index.js]
+    O -->|subcommand clip| CLIP[services/clip/index.js]
 
     O --> CFG[lib/config.js\nĐọc + parse .git-o-config]
     O --> PR[lib/prompt.js\nMenu/input tương tác]
@@ -200,6 +203,7 @@ ocli <subcommand>
 |-----------|-------|
 | `gh`      | GitHub — quản lý repo secrets (cần cài gh CLI) |
 | `azure`   | Azure DevOps — quản lý pipeline variables (REST API) |
+| `clip`    | Clipboard workflow — parse path trong header và ghi file theo cwd |
 
 ---
 

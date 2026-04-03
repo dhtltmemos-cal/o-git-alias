@@ -96,6 +96,7 @@ nodecli/services/gh/index.js
 nodecli/services/gh/secrets.js
 nodecli/services/azure/index.js
 nodecli/services/azure/variables.js
+nodecli/services/clip/index.js
 nodecli/templates/gh-secrets.json
 nodecli/templates/gh-secrets.env.example
 nodecli/templates/azure-pipeline-vars.json

@@ -1,5 +1,18 @@
 # USER_CHANGELOG — nodecli / ocli
 
+## 2026-04-03 — Thêm subcommand ocli clip — clipboard → file
+
+**Yêu cầu:** Thêm nghiệp vụ đầu tiên cho `ocli clip`: đọc clipboard, nhận diện path trong 3 dòng đầu theo comment `//`, ghi nội dung vào file theo cwd, xử lý trường hợp nhiều path và hỏi chạy tiếp vòng tiếp theo.
+
+### Những gì đã làm
+
+- Tạo mới `nodecli/services/clip/index.js` — triển khai subcommand `clip`, đọc clipboard theo OS (Windows dùng PowerShell `Get-Clipboard -Raw`), parse code fence và path metadata.
+- Cập nhật `nodecli/bin/ocli.js` — đăng ký subcommand `clip` trong router `SUBCOMMANDS` và help text.
+- Cập nhật `nodecli/README.md` — bổ sung tài liệu cấu trúc + hướng dẫn sử dụng `ocli clip`.
+- Cập nhật `nodecli/ProjectStructure.md` — thêm cây thư mục cho service `clip`.
+
+---
+
 Lịch sử thay đổi, entry mới nhất ở đầu file.
 
 ---

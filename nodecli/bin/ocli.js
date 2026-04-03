@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 // bin/ocli.js — Entry point cho CLI `ocli`
 // Cú pháp: ocli <subcommand> [args...]
-// Subcommands: gh, azure (thêm sau)
+// Subcommands: gh, azure, clip (thêm sau)
 
 'use strict';
 
 const SUBCOMMANDS = {
   gh:    () => require('../services/gh/index').run(),
   azure: () => require('../services/azure/index').run(),
+  clip:  () => require('../services/clip/index').run(),
 };
 
 function printHelp() {
@@ -17,6 +18,7 @@ function printHelp() {
   console.log('  Subcommands:');
   console.log('    gh       GitHub — quản lý secrets (qua gh CLI + .git-o-config)');
   console.log('    azure    Azure DevOps — quản lý pipeline variables (REST API)');
+  console.log('    clip     Đọc clipboard và ghi code vào file theo path metadata');
   console.log('');
   console.log('  Auth: đọc từ .git-o-config đặt cùng thư mục gốc của o-alias repo.');
   console.log('');
