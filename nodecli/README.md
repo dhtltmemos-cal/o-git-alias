@@ -37,6 +37,143 @@ nodecli/
 
 ---
 
+
+## Diagram tổng thể (chi tiết)
+
+### 1) Kiến trúc thư mục + luồng gọi module
+
+```mermaid
+flowchart TB
+    U[Người dùng\nchạy lệnh ocli] --> O[bin/ocli.js\nEntry point + SUBCOMMANDS]
+
+    O -->|subcommand gh| GH[services/gh/index.js]
+    O -->|subcommand azure| AZ[services/azure/index.js]
+
+    O --> CFG[lib/config.js\nĐọc + parse .git-o-config]
+    O --> PR[lib/prompt.js\nMenu/input tương tác]
+    O --> SH[lib/shell.js\nChạy shell command]
+    O --> API[lib/azureApi.js\nHTTPS wrapper Azure DevOps]
+
+    GH --> GHSEC[services/gh/secrets.js\nList/Set/Delete secrets]
+    GH --> SH
+    GH --> PR
+    GH --> CFG
+
+    AZ --> AZVAR[services/azure/variables.js\nList/Set/Delete variables]
+    AZ --> PR
+    AZ --> CFG
+    AZ --> API
+
+    GHSEC --> TGH1[templates/gh-secrets.json]
+    GHSEC --> TGH2[templates/gh-secrets.env.example]
+    AZVAR --> TAZ1[templates/azure-pipeline-vars.json]
+    AZVAR --> TAZ2[templates/azure-pipeline-vars.env.example]
+
+    CFG --> GC[(~/.git-o-config\nhoặc ./.git-o-config)]
+```
+
+### 2) Sequence cho `ocli gh` (GitHub Secrets)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as User
+    participant OCLI as bin/ocli.js
+    participant Cfg as lib/config.js
+    participant Prompt as lib/prompt.js
+    participant GH as services/gh/index.js
+    participant Sec as services/gh/secrets.js
+    participant Shell as lib/shell.js
+    participant GHCli as gh CLI
+    participant GHApi as GitHub API
+
+    User->>OCLI: ocli gh
+    OCLI->>Cfg: loadConfig()
+    Cfg-->>OCLI: Danh sách account github.com/*
+    OCLI->>GH: run(ctx)
+
+    GH->>Prompt: Chọn account/repo/action
+    Prompt-->>GH: User selection
+
+    alt List secrets
+        GH->>Sec: listSecrets(repo, token)
+        Sec->>Shell: exec(gh secret list ... )
+        Shell->>GHCli: run command
+        GHCli->>GHApi: GET repo secrets
+        GHApi-->>GHCli: result
+        GHCli-->>Shell: output
+        Shell-->>Sec: output
+        Sec-->>GH: parsed result
+    else Set single/multi
+        GH->>Sec: setSecret(s)
+        Sec->>Shell: exec(gh secret set ... )
+    else Delete secret
+        GH->>Sec: deleteSecret()
+        Sec->>Shell: exec(gh secret delete ... )
+    end
+
+    GH-->>User: Render kết quả
+```
+
+### 3) Sequence cho `ocli azure` (Pipeline Variables)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as User
+    participant OCLI as bin/ocli.js
+    participant Cfg as lib/config.js
+    participant Prompt as lib/prompt.js
+    participant AZ as services/azure/index.js
+    participant Var as services/azure/variables.js
+    participant Api as lib/azureApi.js
+    participant ADO as Azure DevOps REST API
+
+    User->>OCLI: ocli azure
+    OCLI->>Cfg: loadConfig()
+    Cfg-->>OCLI: Account dev.azure.com/* + headers
+    OCLI->>AZ: run(ctx)
+
+    AZ->>Prompt: Chọn org/project/pipeline/action
+    Prompt-->>AZ: User selection
+
+    alt List variables
+        AZ->>Var: listVariables(pipelineId)
+        Var->>Api: request(GET definition)
+        Api->>ADO: GET build/definitions/{id}
+        ADO-->>Api: definition.variables
+        Api-->>Var: data
+        Var-->>AZ: rendered variables
+    else Set 1 variable
+        AZ->>Var: upsertVariable(name, value, isSecret, allowOverride)
+        Var->>Api: GET definition
+        Var->>Api: PUT definition (variables updated)
+        Api->>ADO: PUT build/definitions/{id}
+    else Set batch (JSON/.env)
+        AZ->>Var: applyFileVariables(filePath)
+        Var->>Api: GET + PUT definition
+    else Delete variable
+        AZ->>Var: removeVariable(name)
+        Var->>Api: GET + PUT definition
+    end
+
+    AZ-->>User: Render kết quả
+```
+
+### 4) Bảng trách nhiệm module
+
+| Module | Trách nhiệm chính | I/O chính |
+|---|---|---|
+| `bin/ocli.js` | Router subcommand, khởi tạo context dùng chung | Input: argv, Output: gọi service tương ứng |
+| `lib/config.js` | Parse `.git-o-config`, normalize account/provider | Input: file config, Output: account objects |
+| `lib/prompt.js` | Giao diện nhập/chọn tương tác CLI | Input: options/schema, Output: selection/value |
+| `lib/shell.js` | Chạy command shell (đặc biệt cho `gh`) | Input: command/env, Output: stdout/stderr/exitCode |
+| `lib/azureApi.js` | HTTP client tối giản cho Azure DevOps | Input: method/url/body/headers, Output: JSON response |
+| `services/gh/*` | Nghiệp vụ GitHub secrets | Input: token/repo/file, Output: danh sách/trạng thái secrets |
+| `services/azure/*` | Nghiệp vụ Azure pipeline variables | Input: org/project/pipeline/vars, Output: definition đã cập nhật |
+
+---
+
 ## Cài đặt
 
 ```bash
