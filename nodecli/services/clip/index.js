@@ -1,50 +1,50 @@
 // services/clip/index.js — Subcommand `ocli clip`
 // Flow: đọc clipboard (Windows) → parse định dạng khối code có path → ghi file theo cwd
 
-'use strict';
+"use strict";
 
-const fs = require('fs');
-const path = require('path');
-const { spawn, commandExists } = require('../../lib/shell');
-const { selectMenu, confirm } = require('../../lib/prompt');
+const fs = require("fs");
+const path = require("path");
+const { spawn, commandExists } = require("../../lib/shell");
+const { selectMenu, confirm } = require("../../lib/prompt");
 
-const LOG = '[clip]';
+const LOG = "[clip]";
 
 function readClipboardText() {
-  if (process.platform === 'win32') {
+  if (process.platform === "win32") {
     // Dùng base64 để tránh lỗi encoding UTF-16/UTF-8 khi đọc tiếng Việt từ PowerShell.
-    const ps = spawn('powershell', [
-      '-NoProfile',
-      '-Command',
+    const ps = spawn("powershell", [
+      "-NoProfile",
+      "-Command",
       '$t = Get-Clipboard -Raw; if ($null -eq $t) { $t = "" }; [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($t))',
     ]);
     if (!ps.ok) {
       throw new Error(`${LOG} Không đọc được clipboard bằng PowerShell: ${ps.stderr}`);
     }
 
-    if (!ps.stdout) return '';
+    if (!ps.stdout) return "";
 
     try {
-      return Buffer.from(ps.stdout, 'base64').toString('utf8');
+      return Buffer.from(ps.stdout, "base64").toString("utf8");
     } catch {
       throw new Error(`${LOG} Clipboard trả về dữ liệu không hợp lệ (base64 decode thất bại).`);
     }
   }
 
-  if (commandExists('pbpaste')) {
-    const r = spawn('pbpaste', []);
+  if (commandExists("pbpaste")) {
+    const r = spawn("pbpaste", []);
     if (!r.ok) throw new Error(`${LOG} Không đọc được clipboard bằng pbpaste: ${r.stderr}`);
     return r.stdout;
   }
 
-  if (commandExists('xclip')) {
-    const r = spawn('xclip', ['-selection', 'clipboard', '-o']);
+  if (commandExists("xclip")) {
+    const r = spawn("xclip", ["-selection", "clipboard", "-o"]);
     if (!r.ok) throw new Error(`${LOG} Không đọc được clipboard bằng xclip: ${r.stderr}`);
     return r.stdout;
   }
 
-  if (commandExists('xsel')) {
-    const r = spawn('xsel', ['--clipboard', '--output']);
+  if (commandExists("xsel")) {
+    const r = spawn("xsel", ["--clipboard", "--output"]);
     if (!r.ok) throw new Error(`${LOG} Không đọc được clipboard bằng xsel: ${r.stderr}`);
     return r.stdout;
   }
@@ -53,13 +53,17 @@ function readClipboardText() {
 }
 
 function stripCodeFence(raw) {
-  const lines = raw.replace(/\r\n/g, '\n').split('\n');
-  if (lines.length === 0) return '';
+  // Một số nguồn copy trả về text 1 dòng có chứa ký tự escape "\n".
+  // Nếu không có newline thật mà có "\\n" thì convert sang newline thật để parse ổn định.
+  const normalizedRaw = !raw.includes("\n") && raw.includes("\\n") ? raw.replace(/\\n/g, "\n") : raw;
 
-  if (lines[0].trim().startsWith('```')) lines.shift();
-  if (lines.length > 0 && lines[lines.length - 1].trim() === '```') lines.pop();
+  const lines = normalizedRaw.replace(/\r\n/g, "\n").split("\n");
+  if (lines.length === 0) return "";
 
-  return lines.join('\n').trim();
+  if (lines[0].trim().startsWith("```")) lines.shift();
+  if (lines.length > 0 && lines[lines.length - 1].trim() === "```") lines.pop();
+
+  return lines.join("\n").trim();
 }
 
 function collectPathCandidates(lines) {
@@ -81,7 +85,7 @@ function collectPathCandidates(lines) {
 }
 
 function normalizePathInput(p) {
-  const cleaned = p.trim().replace(/^['"]|['"]$/g, '');
+  const cleaned = p.trim().replace(/^['"]|['"]$/g, "");
   return cleaned.replace(/\\/g, path.sep).replace(/\//g, path.sep);
 }
 
@@ -91,7 +95,7 @@ function extractPayload(clipboardText) {
   const normalized = stripCodeFence(clipboardText);
   if (!normalized) return null;
 
-  const lines = normalized.split('\n');
+  const lines = normalized.split("\n");
   const first3 = lines.slice(0, 3);
   const candidates = collectPathCandidates(first3);
 
@@ -104,23 +108,12 @@ async function choosePath(candidates) {
   if (candidates.length === 1) return candidates[0];
 
   const idx = await selectMenu(
-    'Phát hiện nhiều path trong 3 dòng đầu, chọn nghiệp vụ ghi file',
-    candidates.map((p) => ({ label: p }))
+    "Phát hiện nhiều path trong 3 dòng đầu, chọn nghiệp vụ ghi file",
+    candidates.map((p) => ({ label: p })),
   );
 
   if (idx === -1) return null;
   return candidates[idx];
-}
-
-function removePathHeader(lines, selectedPath) {
-  if (lines.length === 0) return lines;
-
-  const firstLine = lines[0];
-  const m = firstLine.match(/^\s*\/\/\s*(?:path|file)\s*:\s*(.+?)\s*$/i);
-  if (!m) return lines;
-  if (m[1].trim() !== selectedPath.trim()) return lines;
-
-  return lines.slice(1);
 }
 
 function writeFileFromClipboard(selectedPath, lines) {
@@ -128,8 +121,8 @@ function writeFileFromClipboard(selectedPath, lines) {
   const outPath = path.resolve(process.cwd(), relativePath);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
 
-  const content = `${lines.join('\n').replace(/\s+$/g, '')}\n`;
-  fs.writeFileSync(outPath, content, 'utf8');
+  const content = `${lines.join("\n").replace(/\s+$/g, "")}\n`;
+  fs.writeFileSync(outPath, content, "utf8");
   return outPath;
 }
 
@@ -150,17 +143,17 @@ async function run() {
     } else {
       const selectedPath = await choosePath(payload.candidates);
       if (selectedPath) {
-        const bodyLines = removePathHeader(payload.lines, selectedPath);
-        const outPath = writeFileFromClipboard(selectedPath, bodyLines);
+        // Giữ nguyên header "// Path: ..." trong file output để tránh mất metadata đường dẫn.
+        const outPath = writeFileFromClipboard(selectedPath, payload.lines);
         console.log(`${LOG} Đã ghi nội dung clipboard vào: ${outPath}`);
       } else {
         console.log(`${LOG} Hủy thao tác ghi file.`);
       }
     }
 
-    console.log('');
+    console.log("");
 
-    const shouldContinue = await confirm('Bạn có muốn tiếp tục chạy nghiệp vụ ocli clip không?', true);
+    const shouldContinue = await confirm("Bạn có muốn tiếp tục chạy nghiệp vụ ocli clip không?", true);
     if (!shouldContinue) break;
   }
 }
