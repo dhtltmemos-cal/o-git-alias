@@ -1,5 +1,26 @@
 # USER_CHANGELOG — nodecli / ocli
 
+## 2026-04-03 — Thêm tính năng tạo Azure Pipeline từ YAML trong repo
+
+**Yêu cầu:** Trong `ocli azure`, thêm nghiệp vụ tạo pipeline mới, source YAML được chọn trực tiếp từ repository.
+
+### Những gì đã làm
+
+- Tạo mới `nodecli/services/azure/createPipeline.js`:
+  - Lấy danh sách repo trong project.
+  - Quét file `.yml/.yaml` trong repo để user chọn.
+  - Hỗ trợ nhập tay path YAML.
+  - Tạo build definition (YAML pipeline) qua Azure DevOps REST API.
+- Cập nhật `nodecli/services/azure/index.js`:
+  - Thêm bước chọn flow:
+    - quản lý pipeline hiện có
+    - tạo pipeline mới từ YAML repo
+  - Sau khi tạo thành công pipeline mới, có thể tiếp tục vào menu Variables.
+- Cập nhật `nodecli/README.md`:
+  - Bổ sung mô tả flow mới và file `createPipeline.js` trong cấu trúc.
+
+---
+
 ## 2026-04-03 — Thêm subcommand ocli clip — clipboard → file
 
 **Yêu cầu:** Thêm nghiệp vụ đầu tiên cho `ocli clip`: đọc clipboard, nhận diện path trong 3 dòng đầu theo comment `//`, ghi nội dung vào file theo cwd, xử lý trường hợp nhiều path và hỏi chạy tiếp vòng tiếp theo.

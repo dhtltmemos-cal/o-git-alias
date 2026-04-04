@@ -8,6 +8,7 @@ const { loadSections, filterByProvider, parseSection } = require('../../lib/conf
 const { azureRequest } = require('../../lib/azureApi');
 const { selectMenu, ask } = require('../../lib/prompt');
 const variables = require('./variables');
+const createPipeline = require('./createPipeline');
 
 const LOG = '[azure]';
 
@@ -129,44 +130,58 @@ async function run() {
 
   console.log(`\n${LOG} Project: ${selectedProject}`);
 
-  // ── Bước 3: Chọn pipeline ─────────────────────────────────────────
-  let pipelines = [];
-  try {
-    console.log(`${LOG} Đang lấy danh sách pipeline...`);
-    pipelines = await listPipelines(org, selectedProject, account);
-  } catch (e) {
-    console.error(e.message);
-    process.exit(1);
-  }
-
-  if (pipelines.length === 0) {
-    console.log(`${LOG} Project không có pipeline nào.`);
-    return;
-  }
-
-  const pipelineIdx = await selectMenu(
-    `Chọn pipeline — ${selectedProject} (${pipelines.length} pipeline)`,
+  // ── Bước 3: Chọn flow pipeline ────────────────────────────────────
+  const flowIdx = await selectMenu(
+    `Pipeline action — ${selectedProject}`,
     [
-      ...pipelines.map((p) => ({
-        label: `[${String(p.id).padStart(4)}]  ${p.name}`,
-      })),
-      { label: '✏  Nhập ID pipeline thủ công' },
+      { label: 'Chọn pipeline hiện có để quản lý variables' },
+      { label: 'Tạo pipeline mới từ file YAML trong repo' },
     ]
   );
-
-  if (pipelineIdx === -1) return;
+  if (flowIdx === -1) return;
 
   let selectedPipeline;
-  if (pipelineIdx === pipelines.length) {
-    const idStr = await ask('  Pipeline ID (số)');
-    const id = parseInt(idStr, 10);
-    if (isNaN(id)) { console.log('  ID không hợp lệ.'); return; }
-    selectedPipeline = { id, name: `pipeline-${id}` };
+  if (flowIdx === 0) {
+    let pipelines = [];
+    try {
+      console.log(`${LOG} Đang lấy danh sách pipeline...`);
+      pipelines = await listPipelines(org, selectedProject, account);
+    } catch (e) {
+      console.error(e.message);
+      process.exit(1);
+    }
+
+    if (pipelines.length === 0) {
+      console.log(`${LOG} Project không có pipeline nào.`);
+      return;
+    }
+
+    const pipelineIdx = await selectMenu(
+      `Chọn pipeline — ${selectedProject} (${pipelines.length} pipeline)`,
+      [
+        ...pipelines.map((p) => ({
+          label: `[${String(p.id).padStart(4)}]  ${p.name}`,
+        })),
+        { label: '✏  Nhập ID pipeline thủ công' },
+      ]
+    );
+
+    if (pipelineIdx === -1) return;
+
+    if (pipelineIdx === pipelines.length) {
+      const idStr = await ask('  Pipeline ID (số)');
+      const id = parseInt(idStr, 10);
+      if (isNaN(id)) { console.log('  ID không hợp lệ.'); return; }
+      selectedPipeline = { id, name: `pipeline-${id}` };
+    } else {
+      selectedPipeline = {
+        id:   pipelines[pipelineIdx].id,
+        name: pipelines[pipelineIdx].name,
+      };
+    }
   } else {
-    selectedPipeline = {
-      id:   pipelines[pipelineIdx].id,
-      name: pipelines[pipelineIdx].name,
-    };
+    selectedPipeline = await createPipeline.run(org, selectedProject, account);
+    if (!selectedPipeline) return;
   }
 
   console.log(`\n${LOG} Pipeline: ${selectedPipeline.name} (id=${selectedPipeline.id})`);

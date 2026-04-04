@@ -24,7 +24,8 @@ nodecli/
 │   │   ├── index.js            Flow: chọn account → list repo → chọn repo → chọn nghiệp vụ
 │   │   └── secrets.js          Nghiệp vụ: list / set / set-from-file / delete repo secrets
 │   └── azure/                  Subcommand ocli azure — Azure DevOps (REST API)
-│       ├── index.js            Flow: chọn account → chọn project → chọn pipeline → chọn nghiệp vụ
+│       ├── index.js            Flow: chọn account → chọn project → chọn flow pipeline → chọn nghiệp vụ
+│       ├── createPipeline.js   Nghiệp vụ: tạo pipeline mới từ YAML trong repo
 │       └── variables.js        Nghiệp vụ: list / set / set-from-file / delete pipeline variables
 │
 ├── templates/                  File mẫu để user điền và truyền vào khi thao tác hàng loạt
@@ -56,6 +57,7 @@ lib/config.js → sections[]
       │
       └── services/azure/index.js   filterByProvider('dev.azure.com')
             │  → lib/azureApi.js → https → dev.azure.com REST API
+            ├── services/azure/createPipeline.js
             └── services/azure/variables.js
 ```
 
@@ -68,7 +70,8 @@ lib/config.js → sections[]
 | bin/ocli.js | services/*/index.js | lib/* trực tiếp |
 | services/gh/index.js | lib/config, lib/prompt, lib/shell, services/gh/secrets | Các service khác |
 | services/gh/secrets.js | lib/shell, lib/prompt | lib/config, lib/azureApi |
-| services/azure/index.js | lib/config, lib/prompt, lib/azureApi, services/azure/variables | Các service khác |
+| services/azure/index.js | lib/config, lib/prompt, lib/azureApi, services/azure/variables, services/azure/createPipeline | Các service khác |
+| services/azure/createPipeline.js | lib/azureApi, lib/prompt | lib/config, lib/shell |
 | services/azure/variables.js | lib/azureApi, lib/prompt | lib/config, lib/shell |
 | lib/config.js | fs, path, os (built-in) | Không có |
 | lib/prompt.js | readline (built-in) | Không có |
@@ -95,6 +98,7 @@ nodecli/lib/azureApi.js
 nodecli/services/gh/index.js
 nodecli/services/gh/secrets.js
 nodecli/services/azure/index.js
+nodecli/services/azure/createPipeline.js
 nodecli/services/azure/variables.js
 nodecli/services/clip/index.js
 nodecli/templates/gh-secrets.json

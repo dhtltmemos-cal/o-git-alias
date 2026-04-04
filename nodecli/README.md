@@ -22,6 +22,7 @@ nodecli/
       secrets.js                    ← Quản lý GitHub repo secrets
     azure/
       index.js                      ← Subcommand ocli azure
+      createPipeline.js             ← Tạo pipeline mới từ YAML trong repo
       variables.js                  ← Quản lý Azure Pipeline variables
     clip/
       index.js                      ← Subcommand ocli clip (clipboard → file)
@@ -248,8 +249,11 @@ Flow:
 1. Chọn account dev.azure.com/* từ .git-o-config
 2. Lấy danh sách project → chọn project
    (Nếu section config dạng [dev.azure.com/org/project] → tự động dùng project đó)
-3. Lấy danh sách pipeline → chọn pipeline
-4. Chọn nghiệp vụ: Variables
+3. Chọn flow:
+   - Chọn pipeline hiện có để quản lý variables
+   - Tạo pipeline mới từ file YAML trong repo
+4. Nếu tạo mới: chọn repo → chọn file `.yml/.yaml` từ repo → nhập tên pipeline → tạo pipeline
+5. Chọn nghiệp vụ: Variables
 
 Variables — các thao tác hỗ trợ:
 - Xem danh sách variables (hiển thị tên, isSecret, giá trị)
