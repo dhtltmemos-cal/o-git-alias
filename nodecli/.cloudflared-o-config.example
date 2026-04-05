@@ -1,0 +1,57 @@
+# =============================================================================
+# .cloudflared-o-config — Auth config cho Cloudflare API (ocli cloudflared)
+# Đặt trong thư mục nodecli/ | KHÔNG commit file này lên git
+# =============================================================================
+#
+# CÁCH LẤY THÔNG TIN:
+#   X-Auth-Email : Email đăng nhập Cloudflare
+#   X-Auth-Key   : Global API Key tại https://dash.cloudflare.com/profile/api-tokens
+#                  (tab "Global API Key" → View)
+#
+# CÁCH MATCH:
+#   Section là account name tuỳ đặt (không cần khớp domain).
+#   Có thể có nhiều account.
+#
+# FORMAT:
+#   [<account-label>]
+#   email=<X-Auth-Email>
+#   apikey=<X-Auth-Key>
+#   accountid=<Cloudflare Account ID>  ← lấy từ dash.cloudflare.com (URL hoặc sidebar)
+#
+# =============================================================================
+
+# ── Account chính ─────────────────────────────────────────────────────────────
+[mycompany]
+email=admin@mycompany.com
+apikey=YOUR_GLOBAL_API_KEY_HERE
+accountid=YOUR_ACCOUNT_ID_HERE
+
+# ── Account thứ hai ───────────────────────────────────────────────────────────
+[personal]
+email=me@personal.com
+apikey=ANOTHER_API_KEY_HERE
+accountid=ANOTHER_ACCOUNT_ID_HERE
+
+# =============================================================================
+# GHI CHÚ
+# =============================================================================
+#
+# Account ID tìm tại: https://dash.cloudflare.com
+#   → Chọn domain bất kỳ → sidebar phải → "Account ID"
+#   Hoặc: https://dash.cloudflare.com/?to=/:account/workers → URL chứa account ID
+#
+# Cloudflare Tunnel credentials file output (để deploy Docker):
+#   {
+#     "AccountTag": "<accountid>",
+#     "TunnelSecret": "<base64-secret>",
+#     "TunnelID": "<tunnel-uuid>"
+#   }
+#
+# Config YAML output (cloudflared config.yml):
+#   tunnel: <tunnel-uuid>
+#   credentials-file: /etc/cloudflared/credentials.json
+#   ingress:
+#     - hostname: yourdomain.com
+#       service: http://your-service:port
+#     - service: http_status:404
+#
