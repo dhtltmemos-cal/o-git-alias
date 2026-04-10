@@ -36,8 +36,9 @@ nodecli/
 │   └── cloudflared/            Subcommand ocli cloudflared — Cloudflare Tunnels + DNS
 │       ├── index.js            Flow: load .env → chọn account → resolve accountid (config/env/API)
 │       │                             → hiển thị CLOUDFLARED_* env → chọn nghiệp vụ
-│       └── tunnels.js          Nghiệp vụ: list / tạo / xuất credentials+config / DNS records / token / xóa
-│                               Đọc CLOUDFLARED_TUNNEL_* từ env để tự điền thông tin
+│       ├── tunnels.js          Nghiệp vụ: list / tạo / xuất credentials+config / DNS records / token / xóa
+│       │                       Đọc CLOUDFLARED_TUNNEL_* từ env để tự điền thông tin
+│       └── tunnelAlerts.js     Nghiệp vụ: Cloudflare Notification Policies cho tunnel health
 │
 ├── templates/                  File mẫu để user điền và truyền vào khi thao tác hàng loạt
 │   ├── gh-secrets.json         Mẫu JSON: key=value string
@@ -75,11 +76,15 @@ nodecli/.cloudflared-o-config
             │  → lib/cloudflaredApi.js → https → api.cloudflare.com
             │  → loadCloudflaredEnv() → process.env CLOUDFLARED_* (từ .env)
             │  → listCloudflareAccounts() nếu accountid chưa có
-            └── services/cloudflared/tunnels.js
-                  ├── Đọc CLOUDFLARED_TUNNEL_NAME/ID/SECRET/HOSTNAME_N/SERVICE_N từ env
-                  ├── Tạo/list/xóa tunnel
-                  ├── Xuất credentials.json + config.yml
-                  └── Upsert CNAME records qua Cloudflare DNS API
+            ├── services/cloudflared/tunnels.js
+            │     ├── Đọc CLOUDFLARED_TUNNEL_NAME/ID/SECRET/HOSTNAME_N/SERVICE_N từ env
+            │     ├── Tạo/list/xóa tunnel
+            │     ├── Xuất credentials.json + config.yml
+            │     └── Upsert CNAME records qua Cloudflare DNS API
+            └── services/cloudflared/tunnelAlerts.js
+                  ├── List Cloudflare alerting policies (lọc tunnel_health_alert)
+                  ├── Tạo Notification Policy gửi email khi tunnel đổi trạng thái
+                  └── Xóa Notification Policy
 
 Clipboard (OS):
       │
@@ -118,7 +123,8 @@ File / ZIP input:
 | services/clip/index.js           | lib/shell, lib/prompt                                                       | lib/config, lib/azureApi, lib/cloudflaredApi |
 | services/addfiles/index.js       | lib/shell, lib/prompt                                                       | lib/config, lib/azureApi, lib/cloudflaredApi |
 | services/cloudflared/index.js    | lib/cloudflaredApi, lib/prompt, cloudflared/tunnels                         | Các service khác                             |
-| services/cloudflared/tunnels.js  | lib/cloudflaredApi, lib/prompt                                              | lib/config, lib/azureApi, lib/shell          |
+| services/cloudflared/tunnels.js  | lib/cloudflaredApi, lib/prompt, cloudflared/tunnelAlerts                    | lib/config, lib/azureApi, lib/shell          |
+| services/cloudflared/tunnelAlerts.js | lib/cloudflaredApi, lib/prompt                                          | lib/config, lib/azureApi, lib/shell          |
 | lib/config.js                    | fs, path, os (built-in)                                                     | Không có                                     |
 | lib/prompt.js                    | readline (built-in)                                                         | Không có                                     |
 | lib/shell.js                     | child_process (built-in)                                                    | Không có                                     |
@@ -153,6 +159,7 @@ nodecli/services/clip/index.js
 nodecli/services/addfiles/index.js
 nodecli/services/cloudflared/index.js
 nodecli/services/cloudflared/tunnels.js
+nodecli/services/cloudflared/tunnelAlerts.js
 nodecli/templates/gh-secrets.json
 nodecli/templates/gh-secrets.env.example
 nodecli/templates/azure-pipeline-vars.json

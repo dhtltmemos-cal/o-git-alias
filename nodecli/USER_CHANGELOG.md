@@ -1,5 +1,38 @@
 # USER_CHANGELOG — nodecli / ocli
 
+## 2026-04-10 — cloudflared: thêm Tunnel Health Alert Notification Policies qua Cloudflare Alerting API
+
+**Loại:** Feature
+
+### Những gì đã thêm
+
+**`services/cloudflared/tunnelAlerts.js`:**
+
+- Thêm module mới để quản lý Cloudflare Alerting v3 policies cho `tunnel_health_alert`
+- Hỗ trợ `GET /accounts/:account_id/alerting/v3/policies` và lọc riêng policy của Zero Trust Tunnel
+- Hỗ trợ `POST /accounts/:account_id/alerting/v3/policies` với `filters: {}` để nhận email khi tunnel đổi trạng thái `healthy / degraded / down`
+- Hỗ trợ `DELETE /accounts/:account_id/alerting/v3/policies/:policy_id`
+- In bảng policy gồm tên, policy ID, enabled, email nhận thông báo
+- Bổ sung fallback lỗi entitlement: nếu API trả lỗi kiểu `not entitled` / code `7003`, log gợi ý quyền `Account > Notifications > Edit`
+
+**`services/cloudflared/tunnels.js`:**
+
+- Chỉ chèn 3 điểm tích hợp theo đúng task:
+  - thêm `require("./tunnelAlerts")`
+  - thêm menu item `Quản lý Notification Policies (Tunnel Health Alert → email)`
+  - thêm handler `if (idx === 6) await runAlertMenu(account)`
+- Giữ nguyên toàn bộ logic hiện có cho tunnel / DNS / token / delete
+
+**`README.md`:**
+
+- Bổ sung mô tả tính năng Notification Policies trong subcommand `cloudflared`
+
+**`ProjectStructure.md`:**
+
+- Cập nhật sơ đồ thư mục, luồng dữ liệu, dependency table, và danh sách file ZIP để bao gồm `services/cloudflared/tunnelAlerts.js`
+
+---
+
 ## 2026-04-10 — gh secrets: thêm nguồn process.env, multi-select biến, preview giá trị
 
 **Loại:** Feature

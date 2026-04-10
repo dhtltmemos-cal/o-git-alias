@@ -34,6 +34,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { cloudflaredRequest } = require("../../lib/cloudflaredApi");
 const { ask, confirm, selectMenu, askFilePath } = require("../../lib/prompt");
+const { runAlertMenu } = require("./tunnelAlerts");
 
 const LOG = "[cloudflared:tunnels]";
 
@@ -990,6 +991,7 @@ async function run(account, envVars = {}) {
       { label: "Tạo / cập nhật DNS records (CNAME) cho tunnel" },
       { label: "Lấy tunnel run token (cloudflared tunnel run --token)" },
       { label: "Xóa tunnel" },
+      { label: "Quản lý Notification Policies (Tunnel Health Alert → email)" },
     ]);
 
     if (idx === -1) break;
@@ -1000,6 +1002,7 @@ async function run(account, envVars = {}) {
     if (idx === 3) await workflowManageDns(account, envVars);
     if (idx === 4) await showTunnelToken(account);
     if (idx === 5) await deleteTunnel(account);
+    if (idx === 6) await runAlertMenu(account);
   }
 }
 
