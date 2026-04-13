@@ -1,5 +1,5 @@
 // services/azure/variables.js — Quản lý Azure Pipeline Variables
-// Nghiệp vụ: list, set (từng cái hoặc từ file), delete variables của một pipeline.
+// Nghiệp vụ: list, set (từng cái hoặc từ nguồn), delete variables của một pipeline.
 //
 // Azure DevOps API dùng:
 //   GET  /{org}/{project}/_apis/build/definitions/{definitionId}?api-version=7.1
@@ -13,7 +13,7 @@
 const fs   = require('fs');
 const path = require('path');
 const { azureRequest } = require('../../lib/azureApi');
-const { ask, confirm, selectMenu, askFilePath } = require('../../lib/prompt');
+const { ask, confirm, selectMenu, askFilePath, askMultiSelect } = require('../../lib/prompt');
 
 const LOG = '[azure:variables]';
 const API_VERSION = '7.1';
@@ -140,7 +140,44 @@ async function setOneVariable(org, project, pipeline, account) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// SET nhiều variables từ file JSON hoặc .env
+// HELPER: Biến môi trường hệ thống cần lọc bỏ (giống gh/secrets)
+// ─────────────────────────────────────────────────────────────────
+
+const SYSTEM_ENV_PREFIXES = [
+  'npm_', 'NODE_', 'npm_config_', 'APPDATA', 'CommonProgramFiles',
+  'COMPUTERNAME', 'ComSpec', 'HOMEDRIVE', 'HOMEPATH', 'LOCALAPPDATA',
+  'LOGONSERVER', 'NUMBER_OF_PROCESSORS', 'OS', 'PATHEXT', 'PROCESSOR_',
+  'ProgramData', 'ProgramFiles', 'ProgramW6432', 'PSModulePath', 'PUBLIC',
+  'SESSIONNAME', 'SystemDrive', 'SystemRoot', 'TEMP', 'TMP', 'USERDOMAIN',
+  'USERNAME', 'USERPROFILE', 'windir', 'ALLUSERSPROFILE', 'INIT_CWD',
+  'NVM_', 'VSCODE_', 'TERM_', 'COLORTERM', 'LANG',
+];
+
+const SYSTEM_ENV_EXACT = new Set([
+  'PATH', 'HOME', 'SHELL', 'PWD', 'OLDPWD', 'SHLVL', 'LOGNAME', 'USER',
+  'MAIL', 'LS_COLORS', 'TERM', 'DISPLAY', '_',
+  'GIT_AUTHOR_NAME', 'GIT_AUTHOR_EMAIL',
+  'GIT_COMMITTER_NAME', 'GIT_COMMITTER_EMAIL',
+]);
+
+function loadFromProcessEnv() {
+  return Object.entries(process.env)
+    .filter(([k]) => {
+      if (SYSTEM_ENV_EXACT.has(k)) return false;
+      if (SYSTEM_ENV_PREFIXES.some((p) => k.startsWith(p))) return false;
+      return true;
+    })
+    .map(([name, value]) => ({
+      name,
+      value: value || '',
+      isSecret: false,
+      allowOverride: true,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// ─────────────────────────────────────────────────────────────────
+// HELPER: Parse file JSON hoặc .env → mảng entries
 //
 // JSON format:
 //   {
@@ -202,36 +239,118 @@ function parseVarsFile(filePath) {
     .filter(Boolean);
 }
 
-async function setFromFile(org, project, pipeline, account) {
-  console.log('\n  Template file có thể ở dạng JSON hoặc .env');
-  console.log('  Xem template mẫu: nodecli/templates/azure-pipeline-vars.json\n');
+// ─────────────────────────────────────────────────────────────────
+// HELPER: Multi-select entries + preview giá trị để xác nhận
+//
+// @param {Array}  entries   — mảng { name, value, isSecret, allowOverride }
+// @param {string} source    — nhãn nguồn ('file' | 'process.env')
+// @returns {Array|null}     — subset entries đã chọn, hoặc null nếu hủy
+// ─────────────────────────────────────────────────────────────────
 
-  const filePath = await askFilePath('  Đường dẫn file variables (JSON hoặc .env)');
-  if (!filePath) { console.log('  Hủy.'); return; }
-
-  let entries;
-  try {
-    entries = parseVarsFile(filePath);
-  } catch (e) {
-    console.error(e.message);
-    return;
-  }
-
+async function pickAndPreviewEntries(entries, source) {
   if (entries.length === 0) {
-    console.log(`${LOG} File không có variable nào.`);
-    return;
+    console.log(`${LOG} Nguồn ${source} không có variable nào.`);
+    return null;
   }
 
-  console.log(`\n  Sẽ set ${entries.length} variable(s) vào pipeline: ${pipeline.name}\n`);
-  entries.forEach((e) => {
-    const tag = e.isSecret ? ' 🔒' : '';
-    console.log(`    • ${e.name}${tag}`);
+  console.log(`\n${LOG} Tải được ${entries.length} variable(s) từ ${source}.`);
+
+  // Multi-select
+  const selectedIndices = await askMultiSelect(
+    `Chọn variable cần set vào pipeline (nguồn: ${source})`,
+    entries.map((e) => ({
+      label: `${e.name}${e.isSecret ? '  🔒' : ''}`,
+    })),
+    { allowAll: true, minSelect: 1 },
+  );
+
+  if (selectedIndices.length === 0) {
+    console.log('  Hủy.');
+    return null;
+  }
+
+  const selected = selectedIndices.map((i) => entries[i]);
+
+  // Hiển thị giá trị để xác nhận
+  console.log('');
+  console.log(`  ┌${'─'.repeat(64)}`);
+  console.log(`  │  Variable đã chọn (${selected.length}) — xác nhận trước khi set`);
+  console.log(`  ├${'─'.repeat(64)}`);
+
+  const maxNameLen = Math.max(...selected.map((e) => e.name.length), 10);
+
+  selected.forEach((e, i) => {
+    const displayVal = e.isSecret
+      ? '(secret — sẽ được ẩn sau khi set)'
+      : e.value.length > 55
+        ? `${e.value.slice(0, 52)}...`
+        : e.value;
+    const secretTag = e.isSecret ? ' 🔒' : '';
+    console.log(
+      `  │  [${String(i + 1).padStart(2)}]  ${(e.name + secretTag).padEnd(maxNameLen + 3)}  =  ${displayVal}`,
+    );
   });
 
-  const ok = await confirm('\n  Xác nhận tiến hành?');
-  if (!ok) { console.log('  Hủy.'); return; }
+  console.log(`  └${'─'.repeat(64)}`);
+  console.log('');
 
-  // Lấy definition 1 lần rồi merge tất cả variable
+  const ok = await confirm(`  Xác nhận set ${selected.length} variable(s) vào pipeline?`);
+  if (!ok) {
+    console.log('  Hủy.');
+    return null;
+  }
+
+  return selected;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// SET nhiều variables từ nguồn: file JSON/.env HOẶC process.env
+// ─────────────────────────────────────────────────────────────────
+
+async function setFromSource(org, project, pipeline, account) {
+  // Bước 1 — Chọn nguồn
+  const sourceIdx = await selectMenu('Nguồn giá trị variables', [
+    { label: 'File .env hoặc JSON  (chọn đường dẫn file)' },
+    { label: 'process.env hiện tại  (biến môi trường đang chạy)' },
+  ]);
+
+  if (sourceIdx === -1) return;
+
+  let entries = [];
+  let sourceLabel = '';
+
+  if (sourceIdx === 0) {
+    // ── File ──────────────────────────────────────────────────────
+    console.log('\n  Template file có thể ở dạng JSON hoặc .env');
+    console.log('  Xem template mẫu: nodecli/templates/azure-pipeline-vars.json\n');
+
+    const filePath = await askFilePath('  Đường dẫn file variables (JSON hoặc .env)');
+    if (!filePath) { console.log('  Hủy.'); return; }
+
+    try {
+      entries = parseVarsFile(filePath);
+    } catch (e) {
+      console.error(e.message);
+      return;
+    }
+
+    sourceLabel = path.basename(filePath);
+  } else {
+    // ── process.env ───────────────────────────────────────────────
+    entries = loadFromProcessEnv();
+    sourceLabel = 'process.env';
+
+    if (entries.length === 0) {
+      console.log(`${LOG} Không tìm thấy biến môi trường nào phù hợp trong process.env.`);
+      return;
+    }
+  }
+
+  // Bước 2 — Multi-select + preview
+  const selected = await pickAndPreviewEntries(entries, sourceLabel);
+  if (!selected) return;
+
+  // Bước 3 — Lấy definition 1 lần rồi merge tất cả variable
   let def;
   try {
     def = await getDefinition(org, project, pipeline.id, account);
@@ -242,7 +361,7 @@ async function setFromFile(org, project, pipeline, account) {
 
   if (!def.variables) def.variables = {};
 
-  for (const entry of entries) {
+  for (const entry of selected) {
     def.variables[entry.name] = {
       value: entry.value,
       isSecret: entry.isSecret,
@@ -252,7 +371,7 @@ async function setFromFile(org, project, pipeline, account) {
 
   try {
     await putDefinition(org, project, pipeline.id, def, account);
-    console.log(`\n${LOG} ✓ Đã set ${entries.length} variable(s) vào: ${pipeline.name}`);
+    console.log(`\n${LOG} ✓ Đã set ${selected.length} variable(s) vào: ${pipeline.name}`);
   } catch (e) {
     console.error(e.message);
   }
@@ -312,7 +431,7 @@ async function run(org, project, pipeline, account) {
     const idx = await selectMenu(`Variables — ${pipeline.name}`, [
       { label: 'Xem danh sách variables' },
       { label: 'Thêm / cập nhật 1 variable (nhập tay)' },
-      { label: 'Thêm / cập nhật nhiều variables từ file (JSON hoặc .env)' },
+      { label: 'Thêm / cập nhật variables từ file hoặc process.env (chọn subset)' },
       { label: 'Xóa 1 variable' },
     ]);
 
@@ -320,7 +439,7 @@ async function run(org, project, pipeline, account) {
 
     if (idx === 0) await listVariables(org, project, pipeline, account);
     if (idx === 1) await setOneVariable(org, project, pipeline, account);
-    if (idx === 2) await setFromFile(org, project, pipeline, account);
+    if (idx === 2) await setFromSource(org, project, pipeline, account);
     if (idx === 3) await deleteVariable(org, project, pipeline, account);
   }
 }

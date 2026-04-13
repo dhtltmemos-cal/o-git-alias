@@ -1,5 +1,34 @@
 # USER_CHANGELOG — nodecli / ocli
 
+## 2026-04-13 — azure variables: thêm nguồn process.env, multi-select, preview giá trị
+
+**Loại:** Feature
+
+### Những gì đã thêm
+
+**`services/azure/variables.js`:**
+
+- Đổi tên hàm `setFromFile` → `setFromSource`, mở rộng để hỗ trợ 2 nguồn giá trị:
+  - **File .env hoặc JSON** — giữ nguyên logic parse cũ (`parseVarsFile`)
+  - **process.env hiện tại** — đọc toàn bộ biến môi trường đang chạy, lọc bỏ biến hệ thống (PATH, HOME, npm\_\*, NODE\_\*, VSCODE\_\*, v.v.)
+- Thêm `loadFromProcessEnv()` — helper load + sort biến từ `process.env`, lọc biến hệ thống rõ ràng (giống pattern đã có ở `gh/secrets.js`)
+- Sau khi load entries từ nguồn đã chọn, gọi `askMultiSelect` để user **chọn subset** variable muốn set (không bắt buộc phải set hết)
+- Sau khi chọn xong, **in bảng preview** `KEY = VALUE` (truncate tại 55 ký tự nếu quá dài, ẩn hiển thị nếu isSecret) để xác nhận trước khi gọi API
+- Thêm import `askMultiSelect` từ `lib/prompt`
+- Thêm constants `SYSTEM_ENV_PREFIXES` và `SYSTEM_ENV_EXACT` để lọc biến hệ thống
+- Thêm helper `pickAndPreviewEntries()` — multi-select + preview chung cho cả hai nguồn
+- Cập nhật label menu item trong `run()`: mô tả rõ hơn chức năng mới
+
+**Thay đổi menu `Variables`:**
+
+| Trước                                                          | Sau                                                                  |
+| -------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Thêm / cập nhật nhiều variables từ file (JSON hoặc .env)       | Thêm / cập nhật variables từ file hoặc process.env (chọn subset)    |
+
+**Lưu ý:** `gh/secrets.js` đã có đầy đủ tính năng này từ trước — không thay đổi.
+
+---
+
 ## 2026-04-10 — cloudflared: thêm flow sinh CF_API_TOKEN qua Cloudflare Account Tokens API
 
 **Loại:** Feature
@@ -98,60 +127,11 @@
 
 - Đổi tên hàm `setFromFile` → `setFromSource`, mở rộng để hỗ trợ 2 nguồn giá trị:
   - **File .env hoặc JSON** — giữ nguyên logic parse cũ (`parseSecretsFile`)
-  - **process.env hiện tại** — đọc toàn bộ biến môi trường đang chạy, lọc bỏ biến hệ thống (PATH, HOME, npm*\*, NODE*\_, VSCODE\_\_, v.v.)
+  - **process.env hiện tại** — đọc toàn bộ biến môi trường đang chạy, lọc bỏ biến hệ thống (PATH, HOME, npm*\*, NODE*\_, VSCODE\_\*, v.v.)
 - Sau khi load entries từ nguồn đã chọn, gọi `askMultiSelect` để user **chọn subset** biến muốn set
 - Sau khi chọn xong, **in bảng preview** `KEY = VALUE` (truncate tại 60 ký tự nếu quá dài) để xác nhận trước khi gọi API
 - Cập nhật label menu item trong `run()`: mô tả rõ hơn chức năng mới
 - Thêm `loadFromProcessEnv()` — helper load + sort biến từ `process.env`, lọc biến hệ thống rõ ràng
-
-**Thay đổi menu `Secrets`:**
-
-| Trước                                                  | Sau                                                            |
-| ------------------------------------------------------ | -------------------------------------------------------------- |
-| Thêm / cập nhật nhiều secrets từ file (JSON hoặc .env) | Thêm / cập nhật secrets từ file hoặc process.env (chọn subset) |
-
-**Ví dụ flow mới:**
-
-```
-Secrets — myorg/myrepo
-  [1]  Xem danh sách secrets
-  [2]  Thêm / cập nhật 1 secret (nhập tay)
-  [3]  Thêm / cập nhật secrets từ file hoặc process.env (chọn subset)
-  [4]  Xóa 1 secret
-
-→ Chọn [3]
-
-Nguồn giá trị secrets
-  [1]  File .env hoặc JSON  (chọn đường dẫn file)
-  [2]  process.env hiện tại  (biến môi trường đang chạy)
-
-→ Chọn [2]
-
-[gh:secrets] Tải được 12 biến từ process.env.
-
-  ┌────────────────────────────────────────────────────────────
-  │  Chọn biến cần set làm secret (nguồn: process.env)
-  ├────────────────────────────────────────────────────────────
-  │  [ 1]  API_BASE_URL
-  │  [ 2]  DATABASE_URL
-  │  [ 3]  DEPLOY_TOKEN
-  │  [ 4]  JWT_SECRET
-  │  ...
-  │  Cú pháp: all | 1 | 1,3,5 | 1-5 | 1,3-5,7
-  │  [0]  Hủy / Quay lại
-  └────────────────────────────────────────────────────────────
-
-  Chọn [0-12]: 2,4
-
-  ┌──────────────────────────────────────────────────────────────
-  │  Biến đã chọn (2) — xác nhận giá trị trước khi set
-  ├──────────────────────────────────────────────────────────────
-  │  [ 1]  DATABASE_URL  =  postgresql://user:pass@host:5432/db
-  │  [ 2]  JWT_SECRET    =  my-very-long-jwt-secret-value
-  └──────────────────────────────────────────────────────────────
-
-  Xác nhận set 2 secret(s) lên repo? [Y/n]:
-```
 
 ---
 
