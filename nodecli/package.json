@@ -1,7 +1,7 @@
 {
   "name": "ocli",
-  "version": "1.5.0",
-  "description": "O-Alias Node CLI — thao tác với GitHub, Azure, Cloudflare và các provider qua config file",
+  "version": "1.6.0",
+  "description": "O-Alias Node CLI — thao tác với GitHub, Azure, Cloudflare, Supabase và các provider qua config file",
   "private": true,
   "bin": {
     "ocli": "./bin/ocli.js"

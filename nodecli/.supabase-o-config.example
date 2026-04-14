@@ -1,0 +1,21 @@
+# =============================================================================
+# .supabase-o-config — Auth config cho Supabase Management API (ocli supabase)
+# Đặt trong thư mục nodecli/ | KHÔNG commit file này lên git
+# =============================================================================
+#
+# accessToken      : Personal Access Token tại https://supabase.com/dashboard/account/tokens
+#                    Format: sbp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# accessTokenExp   : Experimental Access Token (nếu cần dùng API beta)
+#                    Format: sbp_v0_xxxxxxxx
+# email            : Email tài khoản Supabase (dùng để đặt tên file output)
+# defaultPassword  : Mật khẩu mặc định cho database project (tùy chọn)
+# defaultOrgId     : Organization ID mặc định (lấy từ dashboard, tùy chọn)
+#
+# =============================================================================
+
+[myaccount]
+email=you@example.com
+accessToken=sbp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+accessTokenExp=sbp_v0_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+defaultPassword=YourDefaultDbPassword123!
+defaultOrgId=

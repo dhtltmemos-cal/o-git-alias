@@ -1,5 +1,56 @@
 # USER_CHANGELOG — nodecli / ocli
 
+## 2026-04-14 — Thêm subcommand ocli supabase
+
+**Loại:** Feature
+
+### Những gì đã thêm
+
+**`lib/supabaseApi.js`:**
+- Helper gọi Supabase Management API qua https built-in (Bearer token)
+- `supabaseRequest()` với log đầy đủ `→ method path` / `← status (ms)` / `✗ lỗi`
+- `loadSupabaseEnv()` — load file `.env` và trả về biến `SUPABASE_*`
+- `loadSupabaseSections()` — parse file `.supabase-o-config` format INI
+- `slugify()` — chuyển email username thành slug hợp lệ
+
+**`services/supabase/index.js`:**
+- Flow đầy đủ: load env → chọn account → hỏi inputs → confirm → thực hiện
+- Hỗ trợ load account từ `.supabase-o-config` hoặc fallback env vars
+- Bổ sung lưu account env vào `.supabase-o-config` sau khi chạy thành công (nếu user xác nhận)
+- Menu vòng lặp: chạy lại / chỉ lấy DB / chỉ lấy S3
+- Flow “chỉ DB/S3” resolve project bằng Supabase API (không fallback `projectName` thành `project.ref`)
+
+**`services/supabase/projectSetup.js`:**
+- `resolveOrg()` — lấy danh sách org, tự chọn nếu chỉ có 1, menu nếu nhiều
+- `resolveProject()` — tìm project trùng tên hoặc tạo mới, polling đến `ACTIVE_HEALTHY`
+
+**`services/supabase/storageSetup.js`:**
+- `resolveS3()` — tạo S3 access key, kiểm tra/tạo bucket
+- Build endpoint `https://<ref>.supabase.co/storage/v1/s3`
+
+**`services/supabase/databaseInfo.js`:**
+- `fetchAll()` — lấy direct connection, transaction pooler, session pooler info
+- Lấy anon key, service_role key, JWT secret, publishable key
+- Build ENV format strings: nextjs, prisma, full
+
+**`services/supabase/outputWriter.js`:**
+- Tổng hợp JSON output đầy đủ với `_meta`, `s3`, `postgres`, `api`, `envFormats`
+- Ghi file tại 2 nơi: `<cwd>/supabase-<email>.json` và `.supabase-data/supabase-<email>.json`
+- In tóm tắt rõ ràng ra console sau khi hoàn tất
+
+**`nodecli/.supabase-o-config.example`:**
+- Mẫu config với format: `email`, `accessToken`, `accessTokenExp`, `defaultPassword`, `defaultOrgId`
+
+**Biến môi trường SUPABASE_* hỗ trợ:**
+- `SUPABASE_EMAIL`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_ACCESS_TOKEN_EXP`
+- `SUPABASE_PROJECT_NAME`, `SUPABASE_BUCKET_NAME`, `SUPABASE_DB_PASSWORD`
+- `SUPABASE_ORG_ID`, `SUPABASE_PROJECT_REF` (skip tạo project), `SUPABASE_REGION`
+
+**`bin/ocli.js`:** đăng ký subcommand `supabase` và giữ nguyên help cloudflared, bổ sung help supabase
+**`package.json`:** bump version `1.5.0` → `1.6.0`
+
+---
+
 ## 2026-04-13 — azure variables: thêm nguồn process.env, multi-select, preview giá trị
 
 **Loại:** Feature

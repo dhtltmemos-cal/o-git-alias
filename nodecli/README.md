@@ -1,7 +1,7 @@
 # nodecli — O-Alias Node CLI
 
-CLI bổ sung cho [Git O-Alias](../Readme.md), thực hiện các thao tác API tới GitHub, Azure DevOps, Cloudflare, v.v.  
-Sử dụng lại cấu hình auth từ `.git-o-config` và `.cloudflared-o-config`. Không có dependency ngoài — chỉ dùng Node built-ins.
+CLI bổ sung cho [Git O-Alias](../Readme.md), thực hiện các thao tác API tới GitHub, Azure DevOps, Cloudflare, Supabase, v.v.  
+Sử dụng lại cấu hình auth từ `.git-o-config`, `.cloudflared-o-config`, `.supabase-o-config`. Không có dependency ngoài — chỉ dùng Node built-ins.
 
 ---
 
@@ -17,6 +17,7 @@ nodecli/
     shell.js                        ← Helper chạy lệnh shell
     azureApi.js                     ← Helper gọi Azure DevOps REST API
     cloudflaredApi.js               ← Helper gọi Cloudflare REST API + load .env
+    supabaseApi.js                  ← Helper gọi Supabase Management API + load .env
   services/
     gh/
       index.js                      ← Subcommand ocli gh
@@ -33,12 +34,19 @@ nodecli/
       index.js                      ← Subcommand ocli cloudflared
       tunnels.js                    ← Quản lý tunnels, DNS records, xuất credentials
       apiTokens.js                  ← Sinh Account API Token (CF_API_TOKEN) cho cloudflared workflows
+    supabase/
+      index.js                      ← Subcommand ocli supabase
+      projectSetup.js               ← Resolve org, tạo/chọn project, polling ACTIVE_HEALTHY
+      storageSetup.js               ← Tạo S3 access key, kiểm tra/tạo bucket
+      databaseInfo.js               ← Lấy direct/pooler connections, API keys, JWT secret
+      outputWriter.js               ← Tổng hợp JSON, ghi 2 file output, in tóm tắt
   templates/
     gh-secrets.json
     gh-secrets.env.example
     azure-pipeline-vars.json
     azure-pipeline-vars.env.example
   .cloudflared-o-config.example     ← Mẫu config Cloudflare
+  .supabase-o-config.example        ← Mẫu config Supabase
   package.json
   README.md
   DeveloperGuide.vi.md
@@ -77,6 +85,71 @@ ocli <subcommand>
 | `clip`        | Clipboard workflow — parse path trong header và ghi file theo cwd |
 | `addfiles`    | Nhập file/zip, parse `// Path:` trong 3 dòng đầu, ghi/move tuần tự vào cwd |
 | `cloudflared` | Cloudflare Tunnels — tạo tunnel, DNS records, Notification Policies, xuất credentials Docker |
+| `supabase`    | Supabase — tạo project, lấy S3 & PostgreSQL connection info, xuất file JSON |
+
+---
+
+## Subcommand: supabase
+
+```bash
+ocli supabase
+```
+
+Không cần cài thêm CLI — gọi Supabase Management API trực tiếp qua https built-in.
+
+### Cấu hình auth
+
+Tạo file `nodecli/.supabase-o-config` từ mẫu:
+
+```bash
+cp nodecli/.supabase-o-config.example nodecli/.supabase-o-config
+```
+
+Format:
+```ini
+[myaccount]
+email=you@example.com
+accessToken=sbp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+accessTokenExp=sbp_v0_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx   # tùy chọn
+defaultPassword=YourDefaultDbPassword123!                 # tùy chọn
+defaultOrgId=                                             # tùy chọn
+```
+
+Lấy Personal Access Token tại: https://supabase.com/dashboard/account/tokens
+
+### Biến môi trường SUPABASE_*
+
+```env
+SUPABASE_EMAIL=you@example.com
+SUPABASE_ACCESS_TOKEN=sbp_xxxx
+SUPABASE_PROJECT_NAME=myapp-project
+SUPABASE_BUCKET_NAME=myapp-bucket
+SUPABASE_DB_PASSWORD=YourDbPassword123!
+SUPABASE_ORG_ID=your-org-id
+SUPABASE_REGION=ap-southeast-1
+SUPABASE_PROJECT_REF=abcxyzabcxyz
+```
+
+### Tính năng
+
+- Lấy organizations, tạo/chọn project, polling tới `ACTIVE_HEALTHY`
+- Lấy S3 access key + kiểm tra/tạo bucket
+- Lấy PostgreSQL direct + pooler, API keys, JWT secret (nếu có quyền)
+- Ghi output JSON ở 2 nơi:
+  - `<cwd>/supabase-<email>.json`
+  - `nodecli/.supabase-data/supabase-<email>.json`
+
+### Regions hỗ trợ
+
+| Code | Vị trí |
+|---|---|
+| `ap-southeast-1` | Singapore |
+| `ap-southeast-2` | Sydney |
+| `ap-northeast-1` | Tokyo |
+| `us-east-1` | North Virginia |
+| `us-west-1` | North California |
+| `eu-west-1` | Ireland |
+| `eu-central-1` | Frankfurt |
 
 ---
 
@@ -255,6 +328,15 @@ header=Authorization: Basic BASE64ENCODEDPAT==
 email=admin@mycompany.com
 apikey=YOUR_GLOBAL_API_KEY
 accountid=YOUR_ACCOUNT_ID
+```
+
+### Supabase (nodecli/.supabase-o-config)
+```ini
+[myaccount]
+email=you@example.com
+accessToken=sbp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+defaultPassword=YourDefaultDbPassword123!
+defaultOrgId=
 ```
 
 ---

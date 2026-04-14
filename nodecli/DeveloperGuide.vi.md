@@ -16,6 +16,8 @@ nodecli/
     prompt.js                   ← Helper menu/input tương tác (readline)
     shell.js                    ← Helper chạy lệnh shell (child_process)
     azureApi.js                 ← Helper gọi Azure DevOps REST API (https built-in)
+    cloudflaredApi.js           ← Helper gọi Cloudflare REST API (https built-in)
+    supabaseApi.js              ← Helper gọi Supabase Management API (https built-in)
   services/
     gh/
       index.js                  ← Subcommand `ocli gh`: chọn account → repo → nghiệp vụ
@@ -28,6 +30,17 @@ nodecli/
       index.js                  ← Subcommand `ocli clip`: clipboard → file
     addfiles/
       index.js                  ← Subcommand `ocli addfiles`: file/zip → cwd
+    cloudflared/
+      index.js                  ← Subcommand `ocli cloudflared`
+      tunnels.js                ← Nghiệp vụ tunnel/DNS/config
+      tunnelAlerts.js           ← Notification policies cho tunnel health
+      apiTokens.js              ← Sinh CF_API_TOKEN từ Cloudflare Account Tokens API
+    supabase/
+      index.js                  ← Subcommand `ocli supabase`
+      projectSetup.js           ← Resolve org + tạo/chọn project
+      storageSetup.js           ← Tạo S3 key + kiểm tra/tạo bucket
+      databaseInfo.js           ← Lấy DB info + API keys
+      outputWriter.js           ← Tổng hợp JSON output và ghi file
     <provider>/                 ← Thêm provider mới ở đây (xem mục 3)
       index.js
       <nghiep-vu>.js
@@ -36,6 +49,8 @@ nodecli/
     gh-secrets.env.example      ← Template .env để set nhiều secrets
     azure-pipeline-vars.json    ← Template JSON để set nhiều pipeline variables
     azure-pipeline-vars.env.example ← Template .env pipeline variables
+  .cloudflared-o-config.example ← Mẫu config Cloudflare
+  .supabase-o-config.example    ← Mẫu config Supabase
   package.json
   README.md
   DeveloperGuide.vi.md          ← File này
