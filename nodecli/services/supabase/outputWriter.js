@@ -45,6 +45,8 @@ async function write(account, project, s3Creds, dbInfo, inputs) {
       region:           s3Creds.region,
       bucketName:       s3Creds.bucketName,
       projectRef:       s3Creds.projectRef,
+      bucketPublic:     typeof s3Creds.bucketPublic === 'boolean' ? s3Creds.bucketPublic : false,
+      bucketCreatedAt:  s3Creds.bucketCreatedAt || null,
       _note:            'S3-compatible storage. Use with AWS SDK or any S3-compatible client.',
     },
     postgres: {

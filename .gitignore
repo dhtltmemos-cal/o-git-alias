@@ -1,7 +1,8 @@
 .git-o-config
 .opushforce.message
 git-config
-
+*o-config
+*.supabase-data*
 # ── Node.js ──────────────────────────────────────────
 node_modules/
 npm-debug.log*
