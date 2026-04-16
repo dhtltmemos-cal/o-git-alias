@@ -1,5 +1,30 @@
 # USER_CHANGELOG — nodecli / ocli
 
+## 2026-04-16 — Thêm nghiệp vụ GitHub Actions vào `ocli gh`
+
+**Loại:** Feature
+
+### Những gì đã thêm
+
+**`services/gh/actions.js`** (file mới):
+
+- Xem danh sách tất cả workflows của repo (tên, state active/disabled, đường dẫn YAML)
+- Xem runs gần nhất của một workflow với emoji status `🟡 queued / 🔵 in_progress / ✅ success / ❌ failure / ⚪ cancelled / ⏭ skipped`
+- Hiển thị duration theo format `Xm Ys` hoặc `Xh YYm`, tính từ `createdAt` → `updatedAt` (hoặc đến hiện tại nếu đang chạy)
+- Xem chi tiết một run: danh sách jobs, status từng job, duration từng job
+- Kích hoạt workflow qua `workflow_dispatch` (chọn branch, confirm, tùy chọn xem run mới ngay)
+- Bật / Tắt workflow (`gh workflow enable/disable`) với confirm trước khi thực hiện
+- Xem log của một run: truncate 100 dòng cuối nếu log quá dài
+
+**`services/gh/index.js`** (cập nhật):
+
+- Thêm `require('./actions')` và menu item `Actions — xem / kích hoạt / bật-tắt workflows`
+- Số lượng nghiệp vụ trong menu `ocli gh`: Secrets + Actions
+
+**`package.json`:** bump version `1.6.0` → `1.7.0`
+
+---
+
 ## 2026-04-14 — Thêm subcommand ocli supabase
 
 **Loại:** Feature
@@ -7,6 +32,7 @@
 ### Những gì đã thêm
 
 **`lib/supabaseApi.js`:**
+
 - Helper gọi Supabase Management API qua https built-in (Bearer token)
 - `supabaseRequest()` với log đầy đủ `→ method path` / `← status (ms)` / `✗ lỗi`
 - `loadSupabaseEnv()` — load file `.env` và trả về biến `SUPABASE_*`
@@ -14,34 +40,41 @@
 - `slugify()` — chuyển email username thành slug hợp lệ
 
 **`services/supabase/index.js`:**
+
 - Flow đầy đủ: load env → chọn account → hỏi inputs → confirm → thực hiện
 - Hỗ trợ load account từ `.supabase-o-config` hoặc fallback env vars
 - Bổ sung lưu account env vào `.supabase-o-config` sau khi chạy thành công (nếu user xác nhận)
 - Menu vòng lặp: chạy lại / chỉ lấy DB / chỉ lấy S3
-- Flow “chỉ DB/S3” resolve project bằng Supabase API (không fallback `projectName` thành `project.ref`)
+- Flow "chỉ DB/S3" resolve project bằng Supabase API (không fallback `projectName` thành `project.ref`)
 
 **`services/supabase/projectSetup.js`:**
+
 - `resolveOrg()` — lấy danh sách org, tự chọn nếu chỉ có 1, menu nếu nhiều
 - `resolveProject()` — tìm project trùng tên hoặc tạo mới, polling đến `ACTIVE_HEALTHY`
 
 **`services/supabase/storageSetup.js`:**
+
 - `resolveS3()` — tạo S3 access key, kiểm tra/tạo bucket
 - Build endpoint `https://<ref>.supabase.co/storage/v1/s3`
 
 **`services/supabase/databaseInfo.js`:**
+
 - `fetchAll()` — lấy direct connection, transaction pooler, session pooler info
 - Lấy anon key, service_role key, JWT secret, publishable key
 - Build ENV format strings: nextjs, prisma, full
 
 **`services/supabase/outputWriter.js`:**
+
 - Tổng hợp JSON output đầy đủ với `_meta`, `s3`, `postgres`, `api`, `envFormats`
 - Ghi file tại 2 nơi: `<cwd>/supabase-<email>.json` và `.supabase-data/supabase-<email>.json`
 - In tóm tắt rõ ràng ra console sau khi hoàn tất
 
 **`nodecli/.supabase-o-config.example`:**
+
 - Mẫu config với format: `email`, `accessToken`, `accessTokenExp`, `defaultPassword`, `defaultOrgId`
 
-**Biến môi trường SUPABASE_* hỗ trợ:**
+**Biến môi trường SUPABASE\_\* hỗ trợ:**
+
 - `SUPABASE_EMAIL`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_ACCESS_TOKEN_EXP`
 - `SUPABASE_PROJECT_NAME`, `SUPABASE_BUCKET_NAME`, `SUPABASE_DB_PASSWORD`
 - `SUPABASE_ORG_ID`, `SUPABASE_PROJECT_REF` (skip tạo project), `SUPABASE_REGION`
@@ -72,9 +105,9 @@
 
 **Thay đổi menu `Variables`:**
 
-| Trước                                                          | Sau                                                                  |
-| -------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Thêm / cập nhật nhiều variables từ file (JSON hoặc .env)       | Thêm / cập nhật variables từ file hoặc process.env (chọn subset)    |
+| Trước                                                    | Sau                                                              |
+| -------------------------------------------------------- | ---------------------------------------------------------------- |
+| Thêm / cập nhật nhiều variables từ file (JSON hoặc .env) | Thêm / cập nhật variables từ file hoặc process.env (chọn subset) |
 
 **Lưu ý:** `gh/secrets.js` đã có đầy đủ tính năng này từ trước — không thay đổi.
 
@@ -102,7 +135,7 @@
 - Thêm 3 profile quyền dựng sẵn:
   - `Tunnel only`
   - `Tunnel + DNS`
-  - `Tunnel + DNS + Notifications` *(khuyên dùng cho project hiện tại)*
+  - `Tunnel + DNS + Notifications` _(khuyên dùng cho project hiện tại)_
 - Tự map permission groups theo tên/alias để tương thích giữa các cách đặt tên kiểu `Write/Edit`
 - Dùng 2 policy scope riêng:
   - account scope cho quyền account-level như Tunnel / Notifications
