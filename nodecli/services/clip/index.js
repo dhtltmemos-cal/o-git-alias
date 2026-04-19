@@ -176,6 +176,7 @@ function looksLikeFilePath(candidate) {
 function collectPathCandidates(lines) {
   const explicit = [];
   const inferred = [];
+  const broad    = [];
 
   for (const line of lines) {
     // ── Explicit: // Path: <path> hoặc // file: <path> ──────────
@@ -185,15 +186,36 @@ function collectPathCandidates(lines) {
       continue;
     }
 
-    // ── Inferred: // <path-like-string> ─────────────────────────
-    // Khớp khi phần ngay sau "//" là một chuỗi trông như file path, có thể
-    // theo sau bởi " — <mô tả>" hoặc " - <mô tả>" (kiểu header chuẩn của codebase).
-    // Không khớp nếu comment là câu mô tả thuần (VD: "// TODO: fix this util.ts")
-    const mInferred = line.match(/^\s*\/\/\s*([A-Za-z0-9_.][A-Za-z0-9_./\\-]*\.[A-Za-z][A-Za-z0-9_]*)(?:\s*[—–-].*|\s*)$/u);
+    // ── Inferred: // <path> hoặc // <path> — <mô tả> ────────────
+    // Phần sau "//" bắt đầu bằng path hợp lệ, phần còn lại (nếu có)
+    // phải bắt đầu bằng dấu — / – / - (header chuẩn codebase).
+    const mInferred = line.match(
+      /^\s*\/\/\s*([A-Za-z0-9_.][A-Za-z0-9_./\\-]*\.[A-Za-z][A-Za-z0-9_]*)(?:\s*[—–-].*|\s*)$/u,
+    );
     if (mInferred && mInferred[1].trim()) {
       const candidate = mInferred[1].trim();
       if (looksLikeFilePath(candidate)) {
         inferred.push(candidate);
+        continue;
+      }
+    }
+
+    // ── Broad: quét toàn dòng, tìm path-like bất kỳ ─────────────
+    // Chỉ dùng làm fallback khi explicit và inferred không tìm được.
+    // Pattern 1: <path/to/file.ext> hoặc <file.ext> — dạng angle bracket
+    // Pattern 2: path/to/file.ext — bare path có ít nhất 1 dấu /
+    // Pattern 3: file.ext — tên file đứng một mình (extension phải known)
+    const broadPatterns = [
+      /<([A-Za-z0-9_.][A-Za-z0-9_./\\-]*\.[A-Za-z][A-Za-z0-9_]*)>/g,
+      /(?:^|[\s,;:(])([A-Za-z0-9_.][A-Za-z0-9_-]*(?:[/\\][A-Za-z0-9_.][A-Za-z0-9_./\\-]*)+\.[A-Za-z][A-Za-z0-9_]*)/g,
+      /(?:^|[\s,;:(])([A-Za-z0-9_][A-Za-z0-9_.-]{2,}\.[A-Za-z][A-Za-z0-9_]{1,4})(?=\s|$|[,;:)])/g,
+    ];
+    for (const pattern of broadPatterns) {
+      for (const m of line.matchAll(pattern)) {
+        const candidate = (m[1] || "").trim();
+        if (candidate && looksLikeFilePath(candidate)) {
+          broad.push(candidate);
+        }
       }
     }
   }
@@ -201,6 +223,7 @@ function collectPathCandidates(lines) {
   return {
     explicit: [...new Set(explicit)],
     inferred: [...new Set(inferred)],
+    broad:    [...new Set(broad)],
   };
 }
 
@@ -216,11 +239,11 @@ function extractPayload(clipboardText) {
 
   const lines = normalized.split("\n");
   const first3 = lines.slice(0, 3);
-  const { explicit, inferred } = collectPathCandidates(first3);
+  const { explicit, inferred, broad } = collectPathCandidates(first3);
 
-  if (explicit.length === 0 && inferred.length === 0) return null;
+  if (explicit.length === 0 && inferred.length === 0 && broad.length === 0) return null;
 
-  return { lines, explicit, inferred };
+  return { lines, explicit, inferred, broad };
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -300,6 +323,64 @@ async function confirmInferredPath(candidates, cwd) {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// CONFIRM BROAD PATH
+//
+// Dùng khi explicit và inferred đều không tìm được.
+// Regex rộng hơn đã tìm thấy một hoặc nhiều path-like trong dòng comment.
+// Luôn confirm vì độ tin cậy thấp hơn inferred.
+// ─────────────────────────────────────────────────────────────────
+
+async function confirmBroadPath(candidates, cwd) {
+  // Lọc bỏ các path resolve ra ngoài cwd
+  const safe = candidates.filter((p) => {
+    const resolved = path.resolve(cwd, normalizePathInput(p));
+    const rel = path.relative(cwd, resolved);
+    return !rel.startsWith("..") && !path.isAbsolute(rel);
+  });
+
+  if (safe.length === 0) return null;
+
+  if (safe.length === 1) {
+    const candidate = safe[0];
+    const resolved = path.resolve(cwd, normalizePathInput(candidate));
+
+    console.log(`\n${LOG} Phát hiện path-like trong comment (broad — regex rộng):`);
+    console.log(`  Tìm thấy : ${candidate}`);
+    console.log(`  Sẽ ghi   : ${resolved}`);
+    console.log(`  Lý do    : Chuỗi này trông như file path nhưng không nằm ở đầu comment.`);
+    console.log(`             Nếu sai, thêm "// Path: <đường-dẫn>" vào dòng đầu rồi copy lại.`);
+    console.log("");
+
+    const ok = await confirm("  Xác nhận ghi file vào đường dẫn trên?", false);
+    return ok ? candidate : null;
+  }
+
+  // Nhiều candidates
+  console.log(`\n${LOG} Phát hiện nhiều path-like (broad) trong comment:`);
+  safe.forEach((p, i) => {
+    const resolved = path.resolve(cwd, normalizePathInput(p));
+    console.log(`  [${i + 1}] ${p}`);
+    console.log(`      → ${resolved}`);
+  });
+  console.log("");
+
+  const idx = await selectMenu(
+    "Chọn path để ghi (broad — cần xác nhận)",
+    safe.map((p) => {
+      const resolved = path.resolve(cwd, normalizePathInput(p));
+      return { label: `${p.padEnd(45)} → ${resolved}` };
+    }),
+  );
+
+  if (idx === -1) return null;
+
+  const chosen = safe[idx];
+  const resolvedChosen = path.resolve(cwd, normalizePathInput(chosen));
+  const ok = await confirm(`  Xác nhận ghi file vào: ${resolvedChosen}?`, false);
+  return ok ? chosen : null;
+}
+
+// ─────────────────────────────────────────────────────────────────
 // GHI FILE
 // ─────────────────────────────────────────────────────────────────
 
@@ -340,9 +421,12 @@ async function run() {
       if (payload.explicit.length > 0) {
         // Explicit path: tin tưởng hoàn toàn, chọn thẳng
         selectedPath = await chooseExplicitPath(payload.explicit);
-      } else {
-        // Inferred path: hiển thị resolved path đầy đủ, confirm trước khi ghi
+      } else if (payload.inferred.length > 0) {
+        // Inferred path: comment trông như path — hiển thị resolved, confirm
         selectedPath = await confirmInferredPath(payload.inferred, cwd);
+      } else if (payload.broad.length > 0) {
+        // Broad path: tìm thấy path-like bằng regex rộng hơn — luôn confirm
+        selectedPath = await confirmBroadPath(payload.broad, cwd);
       }
 
       if (selectedPath) {
