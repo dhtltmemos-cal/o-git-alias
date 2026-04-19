@@ -8,15 +8,15 @@
 // Variable object trong definition.variables:
 //   { [name]: { value: string, isSecret: boolean, allowOverride: boolean } }
 
-'use strict';
+"use strict";
 
-const fs   = require('fs');
-const path = require('path');
-const { azureRequest } = require('../../lib/azureApi');
-const { ask, confirm, selectMenu, askFilePath, askMultiSelect } = require('../../lib/prompt');
+const fs = require("fs");
+const path = require("path");
+const { azureRequest } = require("../../lib/azureApi");
+const { ask, confirm, selectMenu, askFilePath, askMultiSelect } = require("../../lib/prompt");
 
-const LOG = '[azure:variables]';
-const API_VERSION = '7.1';
+const LOG = "[azure:variables]";
+const API_VERSION = "7.1";
 
 // ─────────────────────────────────────────────────────────────────
 // HELPER: Lấy pipeline definition đầy đủ (cần để PUT lại nguyên vẹn)
@@ -24,7 +24,7 @@ const API_VERSION = '7.1';
 
 async function getDefinition(org, project, definitionId, account) {
   const res = await azureRequest({
-    method: 'GET',
+    method: "GET",
     org,
     path: `${encodeURIComponent(project)}/_apis/build/definitions/${definitionId}?api-version=${API_VERSION}`,
     account,
@@ -45,7 +45,7 @@ async function getDefinition(org, project, definitionId, account) {
 
 async function putDefinition(org, project, definitionId, definition, account) {
   const res = await azureRequest({
-    method: 'PUT',
+    method: "PUT",
     org,
     path: `${encodeURIComponent(project)}/_apis/build/definitions/${definitionId}?api-version=${API_VERSION}`,
     body: definition,
@@ -84,13 +84,14 @@ async function listVariables(org, project, pipeline, account) {
   }
 
   console.log(`\n  Variables hiện có (${entries.length}):\n`);
-  console.log(`    ${'Tên'.padEnd(40)} ${'Secret?'.padEnd(9)} Giá trị`);
-  console.log(`    ${'─'.repeat(40)} ${'─'.repeat(9)} ${'─'.repeat(20)}`);
+  console.log(`    ${"Tên".padEnd(40)} ${"Secret?".padEnd(9)} ${"Override?".padEnd(10)} Giá trị`);
+  console.log(`    ${"─".repeat(40)} ${"─".repeat(9)} ${"─".repeat(10)} ${"─".repeat(20)}`);
 
   entries.forEach(([name, v], i) => {
-    const isSecret = v.isSecret ? '🔒 yes' : 'no';
-    const displayVal = v.isSecret ? '(ẩn)' : (v.value || '');
-    console.log(`    [${String(i + 1).padStart(2)}]  ${name.padEnd(36)} ${isSecret.padEnd(9)} ${displayVal}`);
+    const isSecret = v.isSecret ? "🔒 yes" : "no";
+    const allowOverride = v.allowOverride !== false ? "yes" : "no";
+    const displayVal = v.isSecret ? "(ẩn)" : v.value || "";
+    console.log(`    [${String(i + 1).padStart(2)}]  ${name.padEnd(36)} ${isSecret.padEnd(9)} ${allowOverride.padEnd(10)} ${displayVal}`);
   });
 
   return entries.map(([name]) => name);
@@ -101,8 +102,11 @@ async function listVariables(org, project, pipeline, account) {
 // ─────────────────────────────────────────────────────────────────
 
 async function setOneVariable(org, project, pipeline, account) {
-  const name = await ask('\n  Tên variable (VD: MY_VAR)');
-  if (!name) { console.log('  Hủy.'); return; }
+  const name = await ask("\n  Tên variable (VD: MY_VAR)");
+  if (!name) {
+    console.log("  Hủy.");
+    return;
+  }
 
   const value = await ask(`  Giá trị của ${name}`);
 
@@ -121,7 +125,7 @@ async function setOneVariable(org, project, pipeline, account) {
   // Cập nhật / thêm variable
   if (!def.variables) def.variables = {};
   def.variables[name] = {
-    value: isSecretAns ? '' : value,   // Azure xóa value nếu isSecret khi truyền lên
+    value: isSecretAns ? "" : value,
     isSecret: isSecretAns,
     allowOverride,
   };
@@ -133,31 +137,73 @@ async function setOneVariable(org, project, pipeline, account) {
 
   try {
     await putDefinition(org, project, pipeline.id, def, account);
-    console.log(`${LOG} ✓ Đã set variable: ${name}${isSecretAns ? ' (secret)' : ''}`);
+    console.log(`${LOG} ✓ Đã set variable: ${name}${isSecretAns ? " (secret)" : ""}`);
   } catch (e) {
     console.error(e.message);
   }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// HELPER: Biến môi trường hệ thống cần lọc bỏ (giống gh/secrets)
+// HELPER: Biến môi trường hệ thống cần lọc bỏ
 // ─────────────────────────────────────────────────────────────────
 
 const SYSTEM_ENV_PREFIXES = [
-  'npm_', 'NODE_', 'npm_config_', 'APPDATA', 'CommonProgramFiles',
-  'COMPUTERNAME', 'ComSpec', 'HOMEDRIVE', 'HOMEPATH', 'LOCALAPPDATA',
-  'LOGONSERVER', 'NUMBER_OF_PROCESSORS', 'OS', 'PATHEXT', 'PROCESSOR_',
-  'ProgramData', 'ProgramFiles', 'ProgramW6432', 'PSModulePath', 'PUBLIC',
-  'SESSIONNAME', 'SystemDrive', 'SystemRoot', 'TEMP', 'TMP', 'USERDOMAIN',
-  'USERNAME', 'USERPROFILE', 'windir', 'ALLUSERSPROFILE', 'INIT_CWD',
-  'NVM_', 'VSCODE_', 'TERM_', 'COLORTERM', 'LANG',
+  "npm_",
+  "NODE_",
+  "npm_config_",
+  "APPDATA",
+  "CommonProgramFiles",
+  "COMPUTERNAME",
+  "ComSpec",
+  "HOMEDRIVE",
+  "HOMEPATH",
+  "LOCALAPPDATA",
+  "LOGONSERVER",
+  "NUMBER_OF_PROCESSORS",
+  "OS",
+  "PATHEXT",
+  "PROCESSOR_",
+  "ProgramData",
+  "ProgramFiles",
+  "ProgramW6432",
+  "PSModulePath",
+  "PUBLIC",
+  "SESSIONNAME",
+  "SystemDrive",
+  "SystemRoot",
+  "TEMP",
+  "TMP",
+  "USERDOMAIN",
+  "USERNAME",
+  "USERPROFILE",
+  "windir",
+  "ALLUSERSPROFILE",
+  "INIT_CWD",
+  "NVM_",
+  "VSCODE_",
+  "TERM_",
+  "COLORTERM",
+  "LANG",
 ];
 
 const SYSTEM_ENV_EXACT = new Set([
-  'PATH', 'HOME', 'SHELL', 'PWD', 'OLDPWD', 'SHLVL', 'LOGNAME', 'USER',
-  'MAIL', 'LS_COLORS', 'TERM', 'DISPLAY', '_',
-  'GIT_AUTHOR_NAME', 'GIT_AUTHOR_EMAIL',
-  'GIT_COMMITTER_NAME', 'GIT_COMMITTER_EMAIL',
+  "PATH",
+  "HOME",
+  "SHELL",
+  "PWD",
+  "OLDPWD",
+  "SHLVL",
+  "LOGNAME",
+  "USER",
+  "MAIL",
+  "LS_COLORS",
+  "TERM",
+  "DISPLAY",
+  "_",
+  "GIT_AUTHOR_NAME",
+  "GIT_AUTHOR_EMAIL",
+  "GIT_COMMITTER_NAME",
+  "GIT_COMMITTER_EMAIL",
 ]);
 
 function loadFromProcessEnv() {
@@ -169,7 +215,7 @@ function loadFromProcessEnv() {
     })
     .map(([name, value]) => ({
       name,
-      value: value || '',
+      value: value || "",
       isSecret: false,
       allowOverride: true,
     }))
@@ -186,34 +232,35 @@ function loadFromProcessEnv() {
 //   }
 //
 // ENV format:
-//   VAR_NAME=value
-//   SECRET_VAR=secret          ← mặc định isSecret=false
+//   VAR_NAME=value   ← mặc định isSecret=false
 // ─────────────────────────────────────────────────────────────────
 
 function parseVarsFile(filePath) {
-  const raw = fs.readFileSync(filePath, 'utf8');
+  const raw = fs.readFileSync(filePath, "utf8");
   const ext = path.extname(filePath).toLowerCase();
 
-  if (ext === '.json') {
+  if (ext === ".json") {
     let obj;
-    try { obj = JSON.parse(raw); } catch (e) {
+    try {
+      obj = JSON.parse(raw);
+    } catch (e) {
       throw new Error(`${LOG} File JSON không hợp lệ: ${e.message}`);
     }
-    if (typeof obj !== 'object' || Array.isArray(obj)) {
+    if (typeof obj !== "object" || Array.isArray(obj)) {
       throw new Error(`${LOG} File JSON phải là object`);
     }
 
     return Object.entries(obj)
-      .filter(([k]) => !k.startsWith('_'))   // bỏ qua key comment (_comment)
+      .filter(([k]) => !k.startsWith("_"))
       .map(([name, v]) => {
-        if (typeof v === 'string') {
+        if (typeof v === "string") {
           return { name, value: v, isSecret: false, allowOverride: true };
         }
-        if (typeof v === 'object' && v !== null) {
+        if (typeof v === "object" && v !== null) {
           return {
             name,
-            value:         String(v.value ?? ''),
-            isSecret:      Boolean(v.isSecret),
+            value: String(v.value ?? ""),
+            isSecret: Boolean(v.isSecret),
             allowOverride: v.allowOverride !== undefined ? Boolean(v.allowOverride) : true,
           };
         }
@@ -221,13 +268,13 @@ function parseVarsFile(filePath) {
       });
   }
 
-  // .env format: KEY=value (isSecret mặc định false)
+  // .env format
   return raw
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter((l) => l && !l.startsWith('#'))
+    .filter((l) => l && !l.startsWith("#"))
     .map((l) => {
-      const eq = l.indexOf('=');
+      const eq = l.indexOf("=");
       if (eq === -1) return null;
       return {
         name: l.slice(0, eq).trim(),
@@ -241,10 +288,6 @@ function parseVarsFile(filePath) {
 
 // ─────────────────────────────────────────────────────────────────
 // HELPER: Multi-select entries + preview giá trị để xác nhận
-//
-// @param {Array}  entries   — mảng { name, value, isSecret, allowOverride }
-// @param {string} source    — nhãn nguồn ('file' | 'process.env')
-// @returns {Array|null}     — subset entries đã chọn, hoặc null nếu hủy
 // ─────────────────────────────────────────────────────────────────
 
 async function pickAndPreviewEntries(entries, source) {
@@ -255,52 +298,72 @@ async function pickAndPreviewEntries(entries, source) {
 
   console.log(`\n${LOG} Tải được ${entries.length} variable(s) từ ${source}.`);
 
-  // Multi-select
   const selectedIndices = await askMultiSelect(
     `Chọn variable cần set vào pipeline (nguồn: ${source})`,
     entries.map((e) => ({
-      label: `${e.name}${e.isSecret ? '  🔒' : ''}`,
+      label: `${e.name}${e.isSecret ? "  🔒" : ""}`,
     })),
     { allowAll: true, minSelect: 1 },
   );
 
   if (selectedIndices.length === 0) {
-    console.log('  Hủy.');
+    console.log("  Hủy.");
     return null;
   }
 
   const selected = selectedIndices.map((i) => entries[i]);
 
   // Hiển thị giá trị để xác nhận
-  console.log('');
-  console.log(`  ┌${'─'.repeat(64)}`);
+  console.log("");
+  console.log(`  ┌${"─".repeat(64)}`);
   console.log(`  │  Variable đã chọn (${selected.length}) — xác nhận trước khi set`);
-  console.log(`  ├${'─'.repeat(64)}`);
+  console.log(`  ├${"─".repeat(64)}`);
 
   const maxNameLen = Math.max(...selected.map((e) => e.name.length), 10);
 
   selected.forEach((e, i) => {
-    const displayVal = e.isSecret
-      ? '(secret — sẽ được ẩn sau khi set)'
-      : e.value.length > 55
-        ? `${e.value.slice(0, 52)}...`
-        : e.value;
-    const secretTag = e.isSecret ? ' 🔒' : '';
-    console.log(
-      `  │  [${String(i + 1).padStart(2)}]  ${(e.name + secretTag).padEnd(maxNameLen + 3)}  =  ${displayVal}`,
-    );
+    const displayVal = e.value.length > 55 ? `${e.value.slice(0, 52)}...` : e.value;
+    console.log(`  │  [${String(i + 1).padStart(2)}]  ${e.name.padEnd(maxNameLen)}  =  ${displayVal}`);
   });
 
-  console.log(`  └${'─'.repeat(64)}`);
-  console.log('');
+  console.log(`  └${"─".repeat(64)}`);
+  console.log("");
 
   const ok = await confirm(`  Xác nhận set ${selected.length} variable(s) vào pipeline?`);
   if (!ok) {
-    console.log('  Hủy.');
+    console.log("  Hủy.");
     return null;
   }
 
   return selected;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// HELPER: Hỏi isSecret + allowOverride cho toàn bộ batch
+//
+// Trả về { isSecret: boolean, allowOverride: boolean }
+// Mặc định:
+//   isSecret     = true  (các biến từ CI/env thường là bí mật)
+//   allowOverride = true  (Azure gọi là "Let users override this value
+//                          when running this pipeline")
+// ─────────────────────────────────────────────────────────────────
+
+async function askBatchSecretOptions() {
+  console.log("");
+  console.log("  ── Tuỳ chọn bảo mật cho tất cả variable vừa chọn ──────────────────");
+
+  const isSecret = await confirm(
+    "  Đánh dấu tất cả là secret (ẩn giá trị trong UI)?",
+    true, // default Yes
+  );
+
+  const allowOverride = await confirm(
+    "  Cho phép user override giá trị khi queue build (Let users override this value)?",
+    true, // default Yes
+  );
+
+  console.log("");
+  return { isSecret, allowOverride };
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -309,23 +372,26 @@ async function pickAndPreviewEntries(entries, source) {
 
 async function setFromSource(org, project, pipeline, account) {
   // Bước 1 — Chọn nguồn
-  const sourceIdx = await selectMenu('Nguồn giá trị variables', [
-    { label: 'File .env hoặc JSON  (chọn đường dẫn file)' },
-    { label: 'process.env hiện tại  (biến môi trường đang chạy)' },
+  const sourceIdx = await selectMenu("Nguồn giá trị variables", [
+    { label: "File .env hoặc JSON  (chọn đường dẫn file)" },
+    { label: "process.env hiện tại  (biến môi trường đang chạy)" },
   ]);
 
   if (sourceIdx === -1) return;
 
   let entries = [];
-  let sourceLabel = '';
+  let sourceLabel = "";
 
   if (sourceIdx === 0) {
     // ── File ──────────────────────────────────────────────────────
-    console.log('\n  Template file có thể ở dạng JSON hoặc .env');
-    console.log('  Xem template mẫu: nodecli/templates/azure-pipeline-vars.json\n');
+    console.log("\n  Template file có thể ở dạng JSON hoặc .env");
+    console.log("  Xem template mẫu: nodecli/templates/azure-pipeline-vars.json\n");
 
-    const filePath = await askFilePath('  Đường dẫn file variables (JSON hoặc .env)');
-    if (!filePath) { console.log('  Hủy.'); return; }
+    const filePath = await askFilePath("  Đường dẫn file variables (JSON hoặc .env)");
+    if (!filePath) {
+      console.log("  Hủy.");
+      return;
+    }
 
     try {
       entries = parseVarsFile(filePath);
@@ -338,7 +404,7 @@ async function setFromSource(org, project, pipeline, account) {
   } else {
     // ── process.env ───────────────────────────────────────────────
     entries = loadFromProcessEnv();
-    sourceLabel = 'process.env';
+    sourceLabel = "process.env";
 
     if (entries.length === 0) {
       console.log(`${LOG} Không tìm thấy biến môi trường nào phù hợp trong process.env.`);
@@ -350,7 +416,15 @@ async function setFromSource(org, project, pipeline, account) {
   const selected = await pickAndPreviewEntries(entries, sourceLabel);
   if (!selected) return;
 
-  // Bước 3 — Lấy definition 1 lần rồi merge tất cả variable
+  // Bước 3 — Hỏi isSecret + allowOverride cho toàn bộ batch
+  const { isSecret, allowOverride } = await askBatchSecretOptions();
+
+  // In tóm tắt lựa chọn
+  console.log(`  isSecret     : ${isSecret ? "🔒 Có — giá trị sẽ bị ẩn" : "Không"}`);
+  console.log(`  allowOverride: ${allowOverride ? "Có — user có thể override khi queue build" : "Không"}`);
+  console.log("");
+
+  // Bước 4 — Lấy definition 1 lần rồi merge tất cả variable
   let def;
   try {
     def = await getDefinition(org, project, pipeline.id, account);
@@ -364,14 +438,14 @@ async function setFromSource(org, project, pipeline, account) {
   for (const entry of selected) {
     def.variables[entry.name] = {
       value: entry.value,
-      isSecret: entry.isSecret,
-      allowOverride: entry.allowOverride,
+      isSecret: isSecret,
+      allowOverride: allowOverride,
     };
   }
 
   try {
     await putDefinition(org, project, pipeline.id, def, account);
-    console.log(`\n${LOG} ✓ Đã set ${selected.length} variable(s) vào: ${pipeline.name}`);
+    console.log(`\n${LOG} ✓ Đã set ${selected.length} variable(s) vào: ${pipeline.name}` + ` (secret=${isSecret}, allowOverride=${allowOverride})`);
   } catch (e) {
     console.error(e.message);
   }
@@ -385,19 +459,23 @@ async function deleteVariable(org, project, pipeline, account) {
   const names = await listVariables(org, project, pipeline, account);
   if (names.length === 0) return;
 
-  console.log('');
-  const nameInput = await ask('  Tên variable cần xóa (nhập tên trực tiếp)');
-  if (!nameInput) { console.log('  Hủy.'); return; }
+  console.log("");
+  const nameInput = await ask("  Tên variable cần xóa (nhập tên trực tiếp)");
+  if (!nameInput) {
+    console.log("  Hủy.");
+    return;
+  }
 
   if (!names.includes(nameInput)) {
     console.log(`${LOG} Không tìm thấy variable: ${nameInput}`);
     return;
   }
 
-  const ok = await confirm(
-    `  Xác nhận xóa variable "${nameInput}" khỏi pipeline "${pipeline.name}"?`, false
-  );
-  if (!ok) { console.log('  Hủy.'); return; }
+  const ok = await confirm(`  Xác nhận xóa variable "${nameInput}" khỏi pipeline "${pipeline.name}"?`, false);
+  if (!ok) {
+    console.log("  Hủy.");
+    return;
+  }
 
   let def;
   try {
@@ -429,10 +507,10 @@ async function deleteVariable(org, project, pipeline, account) {
 async function run(org, project, pipeline, account) {
   while (true) {
     const idx = await selectMenu(`Variables — ${pipeline.name}`, [
-      { label: 'Xem danh sách variables' },
-      { label: 'Thêm / cập nhật 1 variable (nhập tay)' },
-      { label: 'Thêm / cập nhật variables từ file hoặc process.env (chọn subset)' },
-      { label: 'Xóa 1 variable' },
+      { label: "Xem danh sách variables" },
+      { label: "Thêm / cập nhật 1 variable (nhập tay)" },
+      { label: "Thêm / cập nhật variables từ file hoặc process.env (chọn subset)" },
+      { label: "Xóa 1 variable" },
     ]);
 
     if (idx === -1) break;
