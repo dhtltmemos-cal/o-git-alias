@@ -186,9 +186,10 @@ function collectPathCandidates(lines) {
     }
 
     // ── Inferred: // <path-like-string> ─────────────────────────
-    // Chỉ khớp khi toàn bộ phần sau "//" là một chuỗi trông như file path.
-    // Không khớp nếu comment có thêm text khác (VD: "// TODO: fix this util.ts")
-    const mInferred = line.match(/^\s*\/\/\s*([A-Za-z0-9_.][A-Za-z0-9_./\\-]*\.[A-Za-z][A-Za-z0-9_]*)\s*$/);
+    // Khớp khi phần ngay sau "//" là một chuỗi trông như file path, có thể
+    // theo sau bởi " — <mô tả>" hoặc " - <mô tả>" (kiểu header chuẩn của codebase).
+    // Không khớp nếu comment là câu mô tả thuần (VD: "// TODO: fix this util.ts")
+    const mInferred = line.match(/^\s*\/\/\s*([A-Za-z0-9_.][A-Za-z0-9_./\\-]*\.[A-Za-z][A-Za-z0-9_]*)(?:\s*[—–-].*|\s*)$/u);
     if (mInferred && mInferred[1].trim()) {
       const candidate = mInferred[1].trim();
       if (looksLikeFilePath(candidate)) {
