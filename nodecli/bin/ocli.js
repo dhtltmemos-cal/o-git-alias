@@ -13,7 +13,7 @@ const SUBCOMMANDS = {
   cloudflared: ()     => require("../services/cloudflared/index").run(),
   supabase:    ()     => require("../services/supabase/index").run(),
   npm:         (args) => require("../services/npm/index").run(args),
-  bom:         ()     => require("../services/bom/index").run(),
+  bom:         (args) => require("../services/bom/index").run(args),
 };
 
 function printHelp() {
@@ -28,11 +28,14 @@ function printHelp() {
   console.log("    cloudflared  Cloudflare Tunnels — tạo tunnel, DNS records, credentials Docker");
   console.log("    supabase     Supabase — tạo project, lấy S3 & PostgreSQL connection info");
   console.log("    npm          Quét & chạy npm scripts (+ .bat / .cmd) trong cây thư mục");
-  console.log("    bom          Tìm file có UTF-8 BOM trong cwd và hỏi trước khi remove");
+  console.log("    bom          Tìm file có UTF-16 LE BOM trong cwd và hỏi trước khi remove");
   console.log("");
   console.log("  npm args:");
   console.log("    --bat        Quét thêm file .bat trong toàn bộ cây thư mục");
   console.log("    --cmd        Quét thêm file .cmd trong toàn bộ cây thư mục");
+  console.log("");
+  console.log("  bom args:");
+  console.log("    --walk       Quét filesystem trực tiếp thay vì dùng git ls-files");
   console.log("");
   console.log("  Auth:");
   console.log("    GitHub / Azure  : .git-o-config (thư mục gốc o-alias repo)");

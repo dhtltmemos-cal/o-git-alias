@@ -86,7 +86,7 @@ ocli <subcommand>
 | `addfiles`    | Nhập file/zip, parse `// Path:` trong 3 dòng đầu, ghi/move tuần tự vào cwd |
 | `cloudflared` | Cloudflare Tunnels — tạo tunnel, DNS records, Notification Policies, xuất credentials Docker |
 | `supabase`    | Supabase — tạo project, lấy S3 & PostgreSQL connection info, xuất file JSON |
-| `bom`         | Quét cwd, liệt kê file có UTF-8 BOM và hỏi trước khi ghi lại không BOM |
+| `bom`         | Quét cwd, liệt kê file có UTF-16 LE BOM và hỏi trước khi ghi lại không BOM |
 
 ---
 
@@ -96,7 +96,13 @@ ocli <subcommand>
 ocli bom
 ```
 
-Quét đệ quy từ thư mục hiện tại, bỏ qua `.git` và `node_modules`. Nếu tìm thấy file bắt đầu bằng UTF-8 BOM (`EF BB BF`), CLI sẽ liệt kê danh sách và hỏi xác nhận trước khi ghi lại nội dung không BOM.
+Mặc định CLI tìm các repo con có `.git`, rồi chạy `git ls-files -co --exclude-standard` trong từng repo. Cách này hợp với thư mục gốc chứa nhiều repo, nhanh hơn vì bỏ qua file ignored như `node_modules`, `dist`, cache. Trong lúc chạy CLI sẽ in tiến trình từng bước: tìm repo, lấy candidate bằng git, kiểm tra BOM.
+
+```bash
+ocli bom --walk
+```
+
+Dùng `--walk` khi cần ép quét filesystem trực tiếp. Walk mode cũng in tiến trình thư mục/file đang quét. Nếu tìm thấy file bắt đầu bằng UTF-16 LE BOM (`FF FE`), CLI sẽ liệt kê danh sách và hỏi xác nhận trước khi ghi lại nội dung không BOM.
 
 ---
 
