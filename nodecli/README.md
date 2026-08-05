@@ -86,6 +86,17 @@ ocli <subcommand>
 | `addfiles`    | Nhập file/zip, parse `// Path:` trong 3 dòng đầu, ghi/move tuần tự vào cwd |
 | `cloudflared` | Cloudflare Tunnels — tạo tunnel, DNS records, Notification Policies, xuất credentials Docker |
 | `supabase`    | Supabase — tạo project, lấy S3 & PostgreSQL connection info, xuất file JSON |
+| `bom`         | Quét cwd, liệt kê file có UTF-8 BOM và hỏi trước khi ghi lại không BOM |
+
+---
+
+## Subcommand: bom
+
+```bash
+ocli bom
+```
+
+Quét đệ quy từ thư mục hiện tại, bỏ qua `.git` và `node_modules`. Nếu tìm thấy file bắt đầu bằng UTF-8 BOM (`EF BB BF`), CLI sẽ liệt kê danh sách và hỏi xác nhận trước khi ghi lại nội dung không BOM.
 
 ---
 
