@@ -63,6 +63,8 @@ git oe
 | ------------------------- | ------------------------------------------------------------------ |
 | `git o`                   | Hiện danh sách lệnh                                                |
 | `git oexecute`            | **Menu tương tác: chọn số → chạy lệnh** (dành khi quên lệnh nào)  |
+| `git ocredential <input>` | Lấy token/header theo username hoặc Git URL để dùng trong lệnh khác |
+| `git getremoteurls`        | Lấy danh sách `o.url`, `o.url0`…`o.url9` theo line hoặc JSON       |
 | `git oaddcommit [msg]`    | `git add -A` + commit (tự sinh message nếu bỏ trống)               |
 | `git oclone [dir]`        | Clone repo từ `o.url`                                              |
 | `git opull`               | Pull từ `o.url` (branch hiện tại)                                  |
@@ -77,6 +79,41 @@ git oe
 | `git oconfig`             | Mở `.git/config` bằng VSCode                                       |
 | `git ocreateremote`       | Tạo remote repo mới qua REST API của provider                      |
 | `git addfile <sub>`       | Tạo file helper cho repo                                           |
+
+### Lấy credential
+
+`ocredential` chỉ in giá trị credential ra stdout, nên có thể dùng trực tiếp
+trong command substitution. Lỗi và hướng dẫn được in ra stderr.
+
+```bash
+# Tra theo Git URL; mặc định trả token, hoặc header nếu section chỉ có header
+GITHUB_TOKEN="$(git ocredential https://github.com/myorg/myrepo.git)"
+
+# Tra theo username (`user=` hoặc phần cuối của tên section)
+GITHUB_TOKEN="$(git ocred myusername)"
+
+# Chọn trường cụ thể
+GITHUB_TOKEN="$(git ocredential --token myusername)"
+AUTH_HEADER="$(git ocredential --header https://dev.azure.com/myorg/myproject/_git/repo)"
+```
+
+Không bật shell tracing (`set -x`) và không `echo` biến chứa token trong script
+để tránh ghi credential vào terminal hoặc log CI.
+
+### Lấy danh sách remote URL
+
+```bash
+# Mặc định: mỗi URL một dòng
+git getremoteurls
+git getremoteurls --lines
+
+# JSON array
+git getremoteurls --json
+git getremoteurls --format json
+git getremoteurls --format=lines
+```
+
+Lệnh chỉ đọc các key local của repo hiện tại: `o.url`, `o.url0`…`o.url9`.
 
 ### `addfile`
 
@@ -125,6 +162,7 @@ Khi đồng bộ `package.json`, script sẽ:
 | `git occ`    | `git oconfigclean`  |
 | `git ocr`    | `git ocreateremote` |
 | `git af`     | `git addfile`       |
+| `git ocred`  | `git ocredential`   |
 
 ---
 

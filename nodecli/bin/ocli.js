@@ -28,7 +28,7 @@ function printHelp() {
   console.log("    cloudflared  Cloudflare Tunnels — tạo tunnel, DNS records, credentials Docker");
   console.log("    supabase     Supabase — tạo project, lấy S3 & PostgreSQL connection info");
   console.log("    npm          Quét & chạy npm scripts (+ .bat / .cmd) trong cây thư mục");
-  console.log("    bom          Tìm file có UTF-16 LE BOM trong cwd và hỏi trước khi remove");
+  console.log("    bom          Tìm file UTF-16 (có/không BOM), hỏi phạm vi rồi đổi sang UTF-8 (backup trước)");
   console.log("");
   console.log("  npm args:");
   console.log("    --bat        Quét thêm file .bat trong toàn bộ cây thư mục");
@@ -36,6 +36,7 @@ function printHelp() {
   console.log("");
   console.log("  bom args:");
   console.log("    --walk       Quét filesystem trực tiếp thay vì dùng git ls-files");
+  console.log("    --restore    Trả lại file từ một session backup (chọn theo ngày giờ)");
   console.log("");
   console.log("  Auth:");
   console.log("    GitHub / Azure  : .git-o-config (thư mục gốc o-alias repo)");

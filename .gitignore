@@ -63,3 +63,4 @@ nodecli/.cloudflared-o-config
 .githooks/prepare-commit-msg
 .githooks/post-commit
 .vstool-commit-template.txt
+nodecli/services/bom

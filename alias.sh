@@ -48,6 +48,9 @@
 #   git config --global alias.odb            "!source \"$SCRIPT\" && odeletebranch"
 #   git config --global alias.oaddconfig     "!source \"$SCRIPT\" && oaddconfig"
 #   git config --global alias.oadc           "!source \"$SCRIPT\" && oaddconfig"
+#   git config --global alias.ocredential    "!source \"$SCRIPT\" && ocredential"
+#   git config --global alias.ocred          "!source \"$SCRIPT\" && ocredential"
+#   git config --global alias.getremoteurls  "!source \"$SCRIPT\" && get_remote_urls"
 #   git config --global alias.setupgit       "!source \"$SCRIPT\" && osetupgit"
 #   git config --global alias.osg            "!source \"$SCRIPT\" && osetupgit"
 #
@@ -92,6 +95,8 @@ function o() {
     echo "    addfile ogitignore             tạo / cập nhật .gitignore"
     echo "  git odeletebranch     git odb    liệt kê và xóa remote branch"
     echo "  git oaddconfig        git oadc   thêm GitHub token vào .git-o-config"
+    echo "  git ocredential       git ocred  lấy credential theo username hoặc Git URL"
+    echo "  git getremoteurls               lấy danh sách o.url, o.url0..o.url9"
     echo "  git setupgit          git osg    menu cài đặt cho repo (hook, ...) — mở rộng được"
     echo ""
     echo "  Windows npm scripts:"
@@ -244,6 +249,114 @@ function _o_resolve_auth() {
 }
 
 # ---------------------------------------------------------------------------
+# OCREDENTIAL: In credential ra stdout để command khác có thể sử dụng.
+#
+# Cú pháp:
+#   git ocredential [--token|--header|--user] <username|git-url>
+#   TOKEN="$(git ocredential github.com/myorg/repo.git)"
+# ---------------------------------------------------------------------------
+function ocredential() {
+    local field="value"
+    case "${1:-}" in
+        --token|--header|--user)
+            field="${1#--}"
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: git ocredential [--token|--header|--user] <username|git-url>"
+            return 0
+            ;;
+    esac
+
+    local query="${1:-}"
+    if [[ -z "$query" || -n "${2:-}" ]]; then
+        echo "[ocredential] ERROR: Cần đúng một username hoặc Git URL." >&2
+        echo "[ocredential] Usage: git ocredential [--token|--header|--user] <username|git-url>" >&2
+        return 2
+    fi
+    if [[ ! -f "$O_CONFIG_FILE" ]]; then
+        echo "[ocredential] ERROR: Không tìm thấy config: $O_CONFIG_FILE" >&2
+        return 1
+    fi
+
+    # Chuẩn hóa scp-like SSH URL: git@github.com:org/repo.git -> github.com/org/repo.git
+    local match_query="$query"
+    if [[ "$match_query" =~ ^[^@]+@([^:]+):(.+)$ ]]; then
+        match_query="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+    fi
+
+    local best_len=0
+    local result_token="" result_user="" result_header="" result_section=""
+    local cur_section="" cur_token="" cur_user="" cur_header=""
+
+    _ocredential_flush() {
+        local section_tail="${cur_section##*/}"
+        local match_len=0
+
+        if [[ -n "$cur_section" && "$match_query" == *"$cur_section"* ]]; then
+            match_len=${#cur_section}
+        elif [[ -n "$cur_user" && "$match_query" == "$cur_user" ]]; then
+            match_len=$((100000 + ${#cur_section}))
+        elif [[ -n "$cur_section" && "$match_query" == "$section_tail" ]]; then
+            match_len=${#cur_section}
+        fi
+
+        if (( match_len > best_len )); then
+            best_len=$match_len
+            result_token="$cur_token"
+            result_user="$cur_user"
+            result_header="$cur_header"
+            result_section="$cur_section"
+        fi
+    }
+
+    while IFS= read -r raw || [[ -n "$raw" ]]; do
+        local line="${raw%%$'\r'}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -z "$line" || "$line" == \#* ]] && continue
+
+        if [[ "$line" =~ ^\[(.+)\]$ ]]; then
+            _ocredential_flush
+            cur_section="${BASH_REMATCH[1]}"; cur_token=""; cur_user=""; cur_header=""
+        elif [[ "$line" =~ ^token[[:space:]]*=[[:space:]]*(.+)$ ]]; then
+            cur_token="${BASH_REMATCH[1]}"
+        elif [[ "$line" =~ ^user[[:space:]]*=[[:space:]]*(.+)$ ]]; then
+            cur_user="${BASH_REMATCH[1]}"
+        elif [[ "$line" =~ ^header[[:space:]]*=[[:space:]]*(.+)$ ]]; then
+            cur_header="${BASH_REMATCH[1]}"
+        fi
+    done < "$O_CONFIG_FILE"
+    _ocredential_flush
+    unset -f _ocredential_flush
+
+    if (( best_len == 0 )); then
+        echo "[ocredential] ERROR: Không tìm thấy credential cho: $query" >&2
+        return 1
+    fi
+
+    local value=""
+    case "$field" in
+        token)  value="$result_token" ;;
+        header) value="$result_header" ;;
+        user)   value="$result_user" ;;
+        value)
+            if [[ -n "$result_token" ]]; then
+                value="$result_token"
+            else
+                value="$result_header"
+            fi
+            ;;
+    esac
+
+    if [[ -z "$value" ]]; then
+        echo "[ocredential] ERROR: Section [$result_section] không có trường $field." >&2
+        return 1
+    fi
+    printf '%s\n' "$value"
+}
+
+# ---------------------------------------------------------------------------
 # CORE: Nhúng token vào URL
 # ---------------------------------------------------------------------------
 function _o_embed_token() {
@@ -313,6 +426,68 @@ function _o_get_url() {
 function get_remote_url() {
     local url; url=$(_o_get_url) || return 1
     echo "$url"
+}
+
+# ---------------------------------------------------------------------------
+# GET_REMOTE_URLS: Lấy danh sách o.url, o.url0..o.url9 theo line hoặc JSON
+# ---------------------------------------------------------------------------
+function get_remote_urls() {
+    local format="lines"
+    while (( $# > 0 )); do
+        case "$1" in
+            --lines) format="lines" ;;
+            --json) format="json" ;;
+            --format)
+                shift
+                if [[ -z "${1:-}" ]]; then
+                    echo "[getremoteurls] ERROR: --format cần giá trị lines hoặc json." >&2
+                    return 2
+                fi
+                format="$1"
+                ;;
+            --format=*) format="${1#*=}" ;;
+            -h|--help)
+                echo "Usage: git getremoteurls [--lines|--json|--format lines|json]"
+                return 0
+                ;;
+            *)
+                echo "[getremoteurls] ERROR: Option không hợp lệ: $1" >&2
+                echo "[getremoteurls] Usage: git getremoteurls [--lines|--json|--format lines|json]" >&2
+                return 2
+                ;;
+        esac
+        shift
+    done
+
+    if [[ "$format" != "lines" && "$format" != "json" ]]; then
+        echo "[getremoteurls] ERROR: Format không hợp lệ: $format (chỉ hỗ trợ lines hoặc json)." >&2
+        return 2
+    fi
+
+    local urls=() key url i
+    for key in o.url $(for i in $(seq 0 9); do printf 'o.url%s\n' "$i"; done); do
+        while IFS= read -r url; do
+            [[ -n "$url" ]] && urls+=("$url")
+        done < <(git config --local --get-all "$key" 2>/dev/null || true)
+    done
+
+    if [[ "$format" == "lines" ]]; then
+        ((${#urls[@]} > 0)) && printf '%s\n' "${urls[@]}"
+        return 0
+    fi
+
+    local escaped separator=""
+    printf '['
+    for url in "${urls[@]}"; do
+        escaped="${url//\\/\\\\}"
+        escaped="${escaped//\"/\\\"}"
+        escaped="${escaped//$'\t'/\\t}"
+        escaped="${escaped//$'\r'/\\r}"
+        escaped="${escaped//$'\n'/\\n}"
+        printf '%s"%s"' "$separator" "$escaped"
+        separator=","
+    done
+    printf ']\n'
 }
 
 # ---------------------------------------------------------------------------
