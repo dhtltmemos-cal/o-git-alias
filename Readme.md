@@ -63,8 +63,6 @@ git oe
 | ------------------------- | ------------------------------------------------------------------ |
 | `git o`                   | Hiện danh sách lệnh                                                |
 | `git oexecute`            | **Menu tương tác: chọn số → chạy lệnh** (dành khi quên lệnh nào)  |
-| `git ocredential <input>` | Lấy token/header theo username hoặc Git URL để dùng trong lệnh khác |
-| `git getremoteurls`        | Lấy danh sách `o.url`, `o.url0`…`o.url9` theo line hoặc JSON       |
 | `git oaddcommit [msg]`    | `git add -A` + commit (tự sinh message nếu bỏ trống)               |
 | `git oclone [dir]`        | Clone repo từ `o.url`                                              |
 | `git opull`               | Pull từ `o.url` (branch hiện tại)                                  |
@@ -79,6 +77,8 @@ git oe
 | `git oconfig`             | Mở `.git/config` bằng VSCode                                       |
 | `git ocreateremote`       | Tạo remote repo mới qua REST API của provider                      |
 | `git addfile <sub>`       | Tạo file helper cho repo                                           |
+| `git ocredential <input>` | Lấy token/header theo username hoặc Git URL để dùng trong lệnh khác |
+| `git getremoteurls`        | Lấy danh sách `o.url`, `o.url0`…`o.url9` theo line hoặc JSON       |
 
 ### Lấy credential
 

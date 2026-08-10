@@ -47,6 +47,8 @@ function _oe_print_menu() {
     echo "  │  20   git odeletebranch       git odb    fetch remote, delete remote branch"
     echo "  │  21   git oaddconfig          git oadc   add config"
     echo "  │  22   git setupgit            git osg    menu cài đặt repo (hook commit message, ...)"
+    echo "  │  23   git ocredential         git ocred  lấy credential theo username hoặc Git URL"
+    echo "  │  24   git getremoteurls                  lấy danh sách URL theo line hoặc JSON"
     echo "  │"
     echo "  │   0   Thoát"
     echo "  │"
@@ -197,6 +199,21 @@ function _oe_run() {
             echo ""
             osetupgit
             ;;
+        23)
+            echo "  → git ocredential"
+            local credential_input
+            read -r -p "  Username hoặc Git URL: " credential_input
+            echo ""
+            ocredential "$credential_input"
+            ;;
+        24)
+            echo "  → git getremoteurls"
+            local output_format
+            read -r -p "  Định dạng [lines/json] (Enter = lines): " output_format
+            output_format="${output_format:-lines}"
+            echo ""
+            get_remote_urls --format "$output_format"
+            ;;
         0)
             echo "  Thoát."
             return 0
@@ -220,12 +237,12 @@ function oexecute() {
     while true; do
         _oe_print_menu
 
-        read -r -p "  Chọn số thứ tự [0-22]: " choice
+        read -r -p "  Chọn số thứ tự [0-24]: " choice
 
         # Validate input
-        if ! [[ "$choice" =~ ^[0-9]+$ ]] || (( choice < 0 || choice > 22 )); then
+        if ! [[ "$choice" =~ ^[0-9]+$ ]] || (( choice < 0 || choice > 24 )); then
             echo ""
-            echo "  ⚠ Nhập số từ 0 đến 22."
+            echo "  ⚠ Nhập số từ 0 đến 24."
             sleep 1
             continue
         fi
