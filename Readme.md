@@ -240,6 +240,10 @@ git oe
 git oexecute
 ```
 
+Sau khi một lệnh chạy xong, menu hiển thị lại tên lệnh vừa chạy và hỏi
+`Quay lại menu? [Y/n/r]`: nhấn Enter hoặc `Y` để về menu, `n` để thoát, hoặc
+`r` để chạy lại lệnh vừa hiển thị.
+
 **Giao diện:**
 
 ```

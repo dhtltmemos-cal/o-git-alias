@@ -71,6 +71,39 @@ function _oe_ask_message() {
 }
 
 # ---------------------------------------------------------------------------
+# HELPER: Tên lệnh tương ứng với lựa chọn, dùng cho tùy chọn chạy lại.
+# ---------------------------------------------------------------------------
+function _oe_command_name() {
+    case "$1" in
+        1)  echo "git oaddcommit" ;;
+        2)  echo "git opush" ;;
+        3)  echo "git opull" ;;
+        4)  echo "git opullbranch" ;;
+        5)  echo "git opushforce" ;;
+        6)  echo "git opushforceurl" ;;
+        7)  echo "git opullpush" ;;
+        8)  echo "git ofetch" ;;
+        9)  echo "git ostash" ;;
+        10) echo "git oinit" ;;
+        11) echo "git oreinit" ;;
+        12) echo "git oconfig" ;;
+        13) echo "git oconfigclean" ;;
+        14) echo "git ocreateremote" ;;
+        15) echo "git addfile packagejson" ;;
+        16) echo "git addfile omessage" ;;
+        17) echo "git addfile ogitignore" ;;
+        18) echo "git oclone" ;;
+        19) echo "git ozip" ;;
+        20) echo "git odeletebranch" ;;
+        21) echo "git oaddconfig" ;;
+        22) echo "git setupgit" ;;
+        23) echo "git ocredential" ;;
+        24) echo "git getremoteurls" ;;
+        *)  echo "lệnh không xác định" ;;
+    esac
+}
+
+# ---------------------------------------------------------------------------
 # HELPER: Chạy lệnh theo số thứ tự đã chọn
 # ---------------------------------------------------------------------------
 function _oe_run() {
@@ -236,7 +269,7 @@ function _oe_run() {
 #          git oe
 # =============================================================================
 function oexecute() {
-    local choice
+    local choice again previous_command
 
     while true; do
         _oe_print_menu
@@ -253,13 +286,31 @@ function oexecute() {
 
         [[ "$choice" == "0" ]] && { echo ""; echo "  Thoát."; echo ""; return 0; }
 
-        _oe_run "$choice"
+        previous_command="$(_oe_command_name "$choice")"
 
-        echo ""
-        local again
-        read -r -p "  Quay lại menu? [Y/n]: " again
-        again="${again:-Y}"
-        [[ "${again,,}" != "y" ]] && break
+        while true; do
+            _oe_run "$choice"
+
+            while true; do
+                echo ""
+                echo "  Lệnh trước: $previous_command"
+                read -r -p "  Quay lại menu? [Y/n/r] (r = chạy lại '$previous_command'): " again
+                again="${again:-Y}"
+
+                case "${again,,}" in
+                    y) break 2 ;;
+                    n) echo ""; return 0 ;;
+                    r)
+                        echo ""
+                        echo "  ↻ Chạy lại: $previous_command"
+                        break
+                        ;;
+                    *)
+                        echo "  ⚠ Chỉ nhập Y, n hoặc r."
+                        ;;
+                esac
+            done
+        done
     done
 
     echo ""
