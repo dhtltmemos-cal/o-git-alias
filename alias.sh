@@ -64,6 +64,32 @@ _O_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 O_CONFIG_FILE="${_O_SCRIPT_DIR}/.git-o-config"
 
 # ---------------------------------------------------------------------------
+# TERMINAL TITLE: Hien thi cwd cho moi Git O-Alias tren Windows 11.
+# OSC 0 duoc Windows Terminal, cmd.exe/ConHost va PowerShell/Pwsh hien dai ho tro.
+# Chi ghi khi stdout la terminal de khong lam ban output duoc redirect/capture.
+# ---------------------------------------------------------------------------
+function _o_set_terminal_title() {
+    [[ -t 1 ]] || return 0
+
+    local cwd name
+    cwd="$(pwd -W 2>/dev/null || pwd)"
+    name="${PWD##*/}"
+    cwd="${cwd//$'\e'/}"
+    cwd="${cwd//$'\a'/}"
+    cwd="${cwd//$'\r'/ }"
+    cwd="${cwd//$'\n'/ }"
+    name="${name//$'\e'/}"
+    name="${name//$'\a'/}"
+    name="${name//$'\r'/ }"
+    name="${name//$'\n'/ }"
+    [[ -n "$name" ]] || name="$cwd"
+
+    printf '\e]0;%s:%s\a' "$name" "$cwd"
+}
+
+_o_set_terminal_title
+
+# ---------------------------------------------------------------------------
 # HELP
 # ---------------------------------------------------------------------------
 function o() {

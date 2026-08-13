@@ -55,6 +55,12 @@ git config --global --list | grep alias.o
 git oe
 ```
 
+Khi chạy bất kỳ O-Alias nào (ví dụ `git oe`), title của cửa sổ/tab terminal sẽ
+được đổi theo dạng `<name>:<path>`, ví dụ `o-git-alias:E:\o-git-alias`. Tính năng này hỗ trợ
+Command Prompt, Windows PowerShell, PowerShell (`pwsh`) và Windows Terminal trên
+Windows 11. Sau khi cập nhật repository, không cần đăng ký lại alias vì các alias
+đã cài đều source `alias.sh` ở mỗi lần chạy.
+
 ---
 
 ## Lệnh

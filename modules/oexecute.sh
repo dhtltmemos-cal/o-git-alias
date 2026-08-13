@@ -18,9 +18,13 @@ _O_MODULE_OEXECUTE_LOADED=1
 # HELPER: In menu lệnh + mô tả
 # ---------------------------------------------------------------------------
 function _oe_print_menu() {
+    local cwd
+    cwd="$(pwd)"
+
     echo ""
     echo "  ┌──────────────────────────────────────────────────────────────────"
     echo "  │  git oexecute — Chọn lệnh để thực hiện"
+    echo "  │  cwd: ${cwd}"
     echo "  ├──────────────────────────────────────────────────────────────────"
     echo "  │"
     echo "  │   #   Lệnh                    Viết tắt   Mô tả"
